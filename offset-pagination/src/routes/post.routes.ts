@@ -38,7 +38,7 @@ postRouter.get("/posts", async(req, res)=>{
             msg: "invalid query parameter",
             details: allData.error.format()
         })
-    return
+        return
     }
     //pagination concept:
     const { page, limit } = allData.data
