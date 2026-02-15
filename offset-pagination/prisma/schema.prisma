@@ -1,0 +1,17 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+
+model Post {
+  id String @id @default(cuid())
+  title String
+  content String
+  author String
+  createdAt DateTime @default(now())
+}

@@ -1,0 +1,1 @@
+//generates fake ass posts
