@@ -30,19 +30,20 @@ postRouter.post("/posts", async (req:Request, res:Response)=>{
 
 
 //get all posts but paginated endpoint (offset pagination)
-postRouter.get("/posts", async(req, res)=>{
+postRouter.get("/posts", async(req:Request, res:Response)=>{
     //we req.query , not req.body in get, because create me toh body me kuch bhejna padta hai na    
     const allData=paginationQuerySchema.safeParse(req.query)
     if(!allData.success){
         res.status(400).json({
-            msg: "invalid query parameter",
+            msg: "in valid query parameter",
             details: allData.error.format()
         })
         return
     }
     //pagination concept:
     const { page, limit } = allData.data
-    
+
+
     const skip= (page-1)*limit
     const [posts, total]= await Promise.all([
         prisma.post.findMany({
