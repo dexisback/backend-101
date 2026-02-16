@@ -1,4 +1,4 @@
-//schema me zod validation hota hai:
+
 
 import z from "zod";
 
@@ -15,9 +15,9 @@ export const paginationQuerySchema = z.object({
 })
 
 
-//create types here only asw: 
-export type CreatePostSchema=z.infer<typeof CreatePostSchema>
-export type paginationQuerySchema=z.infer<typeof paginationQuerySchema>
+
+export type CreatePostSchema = z.infer<typeof CreatePostSchema>
+export type paginationQuerySchema = z.infer<typeof paginationQuerySchema>
 
 
 
