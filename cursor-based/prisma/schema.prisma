@@ -1,0 +1,24 @@
+
+generator client {
+  provider = "prisma-client-js"
+  
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model Activity {
+  id           String       @id        @default(cuid())
+  developer    String       
+  action       String 
+  project      String 
+  createdAt    DateTime                @default(now())
+
+
+  @@index([createdAt])
+}
+
+
+
