@@ -1,0 +1,30 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model User {
+  id             String               @id @default(cuid())
+  email          String               @unique
+  password       String    
+  name           String                
+  createdAt      DateTime             @default(now())
+  refreshTokens  RefreshToken[]
+
+}
+
+//user->refreshToken is a one to many relation(phone+laptop = 2 tokens)
+//if user is deleted, all their refresh tokens are deleted asw
+model RefreshToken{
+  id          String        @id @default(cuid())
+  token       String        @unique
+  userId      String   
+  expiresAt   DateTime
+  createdAt   DateTime     @default(now())
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
