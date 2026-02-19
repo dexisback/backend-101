@@ -1,7 +1,7 @@
 //all db queries for auth live here. nothing else
 //basically prisma logic , crud prisma
 //every auth related feature (hence feature based) lives here
-import prisma from "../../config/db.js";
+import {prisma} from "../../config/db.js";
 import type { registerSchema } from "./auth.schema.js";
 
 export const authRepository = {

@@ -1,5 +1,16 @@
-node_modules
+node_modules/
 # Keep environment variables out of version control
 .env
+.env.*
+!.env.example
 
-/generated/prisma
+#db:
+prisma/migrations/
+
+#logs:
+*.log
+npm-debug.log*
+#generared files:
+/generated/
+dist/
+build/
