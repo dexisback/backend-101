@@ -9,4 +9,17 @@ datasource db {
 }
 
 
-//model:
+//model: dev leaderboard:
+model Developer {
+  id           String      @id @default(cuid())
+  username     String      @unique
+  score        Int        
+  createdAt    DateTime     @default(now())
+  
+  @@index([score(sort: Desc)])
+}
+
+//sort leaderboard socre by descending order
+
+
+
