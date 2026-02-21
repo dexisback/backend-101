@@ -2,10 +2,10 @@
 import'dotenv/config'
 import {PrismaClient }from'../../generated/prisma/client.js'
 import {PrismaNeon }from'@prisma/adapter-neon'
-
+import { env } from './env.js'
 // Initialize the adapter
 const adapter=new PrismaNeon({
-    connectionString:process.env.DATABASE_URL!,
+    connectionString:env.DATABASE_URL!,
 })
 
 console.log("DATABASE_URL =",process.env.DATABASE_URL)
