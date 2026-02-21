@@ -14,6 +14,8 @@ export function asyncHandler (
 
 
 
-
-
-
+//express does not automatically catch rejected promise (fxck u)
+// so, the error escapes, your error middleware does NOT run, server may crash
+//we want this, router.get("/", controller.top)
+//and if controller.top throws error, we want error to go automatically to next(err)
+//this way we are able to catch errors
