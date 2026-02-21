@@ -1,5 +1,5 @@
 //global users of cache commands:
-import { log } from "console";
+
 import redis from "../config/redis.js";
 //get, set, del cache
 
@@ -21,5 +21,5 @@ export async function setCache(
 }
 
 export async function deleteCache(key: string): Promise<void>{ //again, returns nothing
-    redis.del(key)
+    await redis.del(key)
 }
