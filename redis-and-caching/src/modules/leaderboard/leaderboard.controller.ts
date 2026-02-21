@@ -3,7 +3,7 @@
 //calls leaderboardserive.getTopLeaderboard(limit)
 //return ApiResponse.success()
 
-import { QuerySchema } from "./leaderboard.schema.js";
+import { CreateSchema, IdParamSchema, QuerySchema, UpdateSchema } from "./leaderboard.schema.js";
 import type {Request, Response} from "express";
 import ApiResponse from "../../utils/apiResponse.js"
 import { leaderboardService } from "./leaderboard.service.js";
@@ -25,6 +25,46 @@ export const leaderboardController = {
         
         const leaderboardData=await leaderboardService.gettopLeaderboard(limit)
         return res.json(ApiResponse.success(leaderboardData))
+    },
+
+
+
+    async create(req: Request, res: Response){
+        const createData= CreateSchema.safeParse(req.body);
+        if(!createData.success){
+            res.status(400).json(ApiResponse.error("bad create request", 400))
+            return
+        }
+        //else:
+        const { username, score }=createData.data;
+        //repository me createleaderboardField, and service me createdLeaderboard
+        //only need to service, service will handle controller:
+        const result= await leaderboardService.createdLeaderboard(username, score)
+        return res.status(201).json(ApiResponse.success(result))
+    },
+
+    async update(req: Request, res: Response){
+        const data= UpdateSchema.safeParse(req.body);
+        if(!data.success){
+            res.status(400).json(ApiResponse.error("bad update request", 400))
+            return
+        }
+        //else:
+        //get id from params, and score from body:
+        const { id } = IdParamSchema.parse(req.params);
+        const { score } = data.data;
+
+        const result= await leaderboardService.updateLeaderboard(id, score)
+        return res.status(200).json(ApiResponse.success(result))
+
+
+    },
+
+    async delete(req: Request, res: Response){
+        const { id } = IdParamSchema.parse(req.params);
+        const result = await leaderboardService.deleteLeaderboard(id);
+        return res.status(200).json(ApiResponse.success(result))
     }
+
 }
 
