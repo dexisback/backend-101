@@ -4,9 +4,13 @@ import { leaderboardRepository } from "./leaderboard.repository.js";
 import { getCache, setCache, deleteCache } from "../../utils/cache.js";
 
 const LEADERBOARD_TTL= 60  
+const SUPPORTED_LIMITS = new Set([10, 50, 100])
 
 export const leaderboardService = {
     async gettopLeaderboard(limit: number){
+        if(!SUPPORTED_LIMITS.has(limit)){
+            throw new Error("unsupported leaderboard limit")
+        }
         const cacheKey = `leaderboard:top:${limit}`
 
         //cache first
