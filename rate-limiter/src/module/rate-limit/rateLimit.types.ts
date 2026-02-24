@@ -3,7 +3,17 @@ import type { Request } from "express"
 export type FixedWindowConfig = {
   algorithm: "fixed"
   limit: number
+  window: number 
+}
+export type SlidingWindowConfig = {
+  algorithm : "sliding",
+  limit: number,
   window: number
+}
+export type TokenBucketConfig = {
+  algorithm: "tokenBucket"
+  limit: number
+  refill: number
 }
 
 export type RateLimitResult = {
@@ -12,13 +22,8 @@ export type RateLimitResult = {
   resetAt: number
 }
 
-export type TokenBucketConfig = {
-  algorithm: "tokenBucket"
-  limit: number
-  refill: number
-}
 
-export type RateLimitAlgorithmConfig = FixedWindowConfig | TokenBucketConfig
+export type RateLimitAlgorithmConfig = FixedWindowConfig | TokenBucketConfig | SlidingWindowConfig
 
 export type RateLimitMiddlewareConfig = RateLimitAlgorithmConfig & {
   keyGenerator: (req: Request) => string
