@@ -4,7 +4,7 @@ import { create } from "node:domain"
 import { success } from "zod"
 
 const router = Router()
-//sliding window for login endpoint, fixed window as an overall protector
+//sliding window for login endpoint, fixed window as an overall protector, token bucket for search endpoint
 router.get(
   "/overall-test",
   createRateLimiter({
