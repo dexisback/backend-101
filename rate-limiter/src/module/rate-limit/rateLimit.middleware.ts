@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express"
-import { runFixedWindow, runSlidingWindow } from "./rateLimit.algorithm.js"
+import { runFixedWindow, runSlidingWindow, runtokenBucket } from "./rateLimit.algorithm.js"
 import type {
   RateLimitMiddlewareConfig,
   RateLimitResult,
@@ -22,7 +22,12 @@ export function createRateLimiter(config: RateLimitMiddlewareConfig) {
         result = await runFixedWindow(key, config)
       } else if (config.algorithm === "sliding") {
         result = await runSlidingWindow(key, config)
-      } else {
+      } 
+      else if(config.algorithm === "tokenBucket"){
+        result = await runtokenBucket(key, config)
+      }
+      
+      else {
         throw new Error("Unsupported rate-limit algorithm")
       }
 

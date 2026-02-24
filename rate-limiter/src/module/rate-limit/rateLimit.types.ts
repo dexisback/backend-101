@@ -23,7 +23,7 @@ export type RateLimitResult = {
 }
 
 
-export type RateLimitAlgorithmConfig = FixedWindowConfig | TokenBucketConfig | SlidingWindowConfig
+export type RateLimitAlgorithmConfig = FixedWindowConfig | SlidingWindowConfig | TokenBucketConfig
 
 export type RateLimitMiddlewareConfig = RateLimitAlgorithmConfig & {
   keyGenerator: (req: Request) => string
