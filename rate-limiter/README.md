@@ -69,6 +69,7 @@ Config idea in this project:
 - `window: 10` seconds
 - keyed by IP
 
+
 ## How each algorithm is implemented:
 
 ## Fixed Window (Redis counter + expiry)
@@ -130,6 +131,7 @@ src/
       rateLimit.routes.ts
 ```
 
+
 ## run:
 
 1. Ensure Redis is running. 
@@ -157,7 +159,31 @@ curl -i http://localhost:3000/api/overall-test
 
 To trigger rate limits quickly:
 
+1: Login (sliding window):
 ```bash
-for i in {1..15}; do curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/api/login-test; done
+for i in {1..11}; do
+  echo "login request $i"
+  curl -i http://localhost:3000/api/login-test
+  echo ""
+done
 ```
 
+
+2: Search (token bucket):
+```bash
+for i in {1..40}; do
+  echo "search request $i"
+  curl -i http://localhost:3000/api/search-test
+  echo ""
+done
+```
+
+3: Overall (fixed window):
+
+```bash
+for i in {1..6}; do
+  echo "overall request $i"
+  curl -i http://localhost:3000/api/overall-test
+  echo ""
+done
+```
