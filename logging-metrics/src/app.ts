@@ -5,6 +5,7 @@ import { requestLogger } from "./middleware/requestLogger.middleware.js";
 import { logger } from "./lib/logger.js";
 import responseTime from "response-time";   //external lib to calculate response time 
 import { globalErrorHandler } from "./middleware/globalErrorHandler.middleware.js";
+import { register } from "./metrics/metrics.js";
 const app =express();
 app.use(express.json());
 
@@ -13,6 +14,14 @@ app.use(responseTime());
 app.use(globalErrorHandler)
 //request logger middleware:
 app.use(requestLogger)
+
+
+
+//prom-metric expose:
+app.get("/metrics", async(req:Request, res:Response)=>{
+    res.set("Content-Type", register.contentType)
+    res.end(await register.metrics())
+})
 
 
 app.get("/health", (req, res)=>{
