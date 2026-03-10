@@ -4,10 +4,13 @@ import type { NextFunction, Request, Response } from "express";
 import { requestLogger } from "./middleware/requestLogger.middleware.js";
 import { logger } from "./lib/logger.js";
 import responseTime from "response-time";   //external lib to calculate response time 
+import { globalErrorHandler } from "./middleware/globalErrorHandler.middleware.js";
 const app =express();
 app.use(express.json());
 
 app.use(responseTime());
+//global erorr handler middleware:
+app.use(globalErrorHandler)
 //request logger middleware:
 app.use(requestLogger)
 
