@@ -17,9 +17,11 @@ app.get("/health", (req, res)=>{
 })
 
 let remainingTickets = 1000  //To-DO: change to generalised⚠️
+
 export function getTickets() {
     return remainingTickets
 }
+
 
 export function buyTicket(){
     if(remainingTickets <= 0 ){
@@ -35,23 +37,37 @@ export function buyTicket(){
 
 app.get("/ticket", (req, res)=>{
     const remaining = getTickets();
+    logger.info({remaining_tickets: remaining}, "Ticket count checked")
     res.json({ remaining })
 })
 
 
 
 app.post("/buy", (req, res)=>{
+
     const ticket = buyTicket();
     if(!ticket ){
         res.status(400).json({message: "no tickets remaining"})
+        logger.warn({
+            event: "purchase_failed_sold_out"
+        }, "no ticket left" )
         return
     }
-    //else we buy a ticket (function )
+    //else we buy a ticket ( function )
+    logger.info({
+        event: "ticket_purchased",
+        ticketId : ticket.ticketId
+    }, "Ticket succesfully bought")
     res.json({status: "success", ticketId : ticket?.ticketId})
 })
 const PORT = 3000
 
+
+
+
+
 app.listen(PORT, ()=>{
+
     logger.info({
         event: "server_started",
         port: PORT
