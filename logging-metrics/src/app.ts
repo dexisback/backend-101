@@ -6,6 +6,11 @@ import { logger } from "./lib/logger.js";
 import responseTime from "response-time";   //external lib to calculate response time 
 import { globalErrorHandler } from "./middleware/globalErrorHandler.middleware.js";
 import { register } from "./metrics/metrics.js";
+import { totalBuyRequests, totalPurchaseFailures, ticketsRemainingGauge, buyRequestDuration } from "./metrics/metrics.js";
+
+
+
+
 const app =express();
 app.use(express.json());
 
@@ -17,16 +22,6 @@ app.use(requestLogger)
 
 
 
-//prom-metric expose:
-app.get("/metrics", async(req:Request, res:Response)=>{
-    res.set("Content-Type", register.contentType)
-    res.end(await register.metrics())
-})
-
-
-app.get("/health", (req, res)=>{
-    res.json({status: "ok"})
-})
 
 let remainingTickets = 1000  //To-DO: change to generalised⚠️
 
@@ -64,6 +59,23 @@ export function extractUserId(req: Request): string | undefined {
 
 
 
+//   ----------------- ENDPOINTS -------------------
+
+
+
+//prom-metric expose:     
+app.get("/metrics", async(req:Request, res:Response)=>{
+    res.set("Content-Type", register.contentType)
+    res.end(await register.metrics())
+})
+
+
+app.get("/health", (req, res)=>{
+    res.json({status: "ok"})
+})
+
+
+
 app.get("/ticket", (req, res)=>{
     const remaining = getTickets();
     logger.info({
@@ -74,8 +86,12 @@ app.get("/ticket", (req, res)=>{
 })
 
 
-
+//ADD: buyRequestsTotal.inc()⚠️ , TRACK LATENCY, TRACK FAILURES, UPDATE REAMINING TICKETS 
 app.post("/buy",  (req: Request, res: Response)=>{
+
+    const end = buyRequestDuration.startTimer()
+    totalBuyRequests.inc();
+
     //first authenticate user via function made
     const userId = extractUserId(req);
     if(!userId){
@@ -101,6 +117,10 @@ app.post("/buy",  (req: Request, res: Response)=>{
         }, "no ticket left" )
         return
     }
+
+
+    ticketsRemainingGauge.set(getTickets());
+    end();
     //else we buy a ticket ( function )
     logger.info({
         event: "ticket_purchased",
@@ -108,12 +128,17 @@ app.post("/buy",  (req: Request, res: Response)=>{
     }, "Ticket succesfully bought")
     res.json({status: "success", ticketId : ticketId?.ticketId})
 })
+
+
+
+
+
+
+
+
+
+
 const PORT = 3000
-
-
-
-
-
 app.listen(PORT, ()=>{
 
     logger.info({
