@@ -1,6 +1,6 @@
 import express from "express";
 
-
+import type { NextFunction, Request, Response } from "express";
 import { requestLogger } from "./middleware/requestLogger.middleware.js";
 import { logger } from "./lib/logger.js";
 import responseTime from "response-time";   //external lib to calculate response time 
@@ -34,6 +34,20 @@ export function buyTicket(){
     }
 }
 
+export function extractUserId(req: Request): string | undefined {
+    //wjen you try hard is when you die hard
+    const data = req.header("x-user-id");
+    if(!data){
+        return;
+        //Todo: warn ? ⚠️
+    }
+    //else
+        const userId = data?.trim() //whitespace:
+        return userId
+}
+
+
+
 
 app.get("/ticket", (req, res)=>{
     const remaining = getTickets();
@@ -43,7 +57,17 @@ app.get("/ticket", (req, res)=>{
 
 
 
-app.post("/buy", (req, res)=>{
+app.post("/buy",  (req: Request, res: Response)=>{
+    //first authenticate user via function made
+    const userId = extractUserId(req);
+    if(!userId){
+                    res.status(400).json({message: "no user id found"});
+
+        logger.warn({
+            event: "user_not_found"            
+        }, "userId not attached")
+        return; 
+    }
 
     const ticket = buyTicket();
     if(!ticket ){
