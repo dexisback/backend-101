@@ -36,13 +36,15 @@ client.collectDefaultMetrics({ register })
 
 export const totalBuyRequests = new client.Counter({
     name: "buy_requests_total",
-    help: "Total number of buy requests"
+    help: "Total number of buy requests",
+    labelNames : ["status"]    //now this metric expects a label
 })
 
 
 export const totalPurchaseFailures =  new client.Counter({
     name : "purchase_requests_total",
-    help: "Total purchases made"
+    help: "Total purchases made",
+    labelNames: ["reason"]
 })
 
 
@@ -58,6 +60,7 @@ export const ticketsRemainingGauge = new client.Gauge({
 export const buyRequestDuration = new client.Histogram({
     name : "buy_request_duration_ms",
     help : "duration of buy requests",
+    labelNames : ["status"],
     buckets: [5,10,25,59,100,200,500]
 })
 

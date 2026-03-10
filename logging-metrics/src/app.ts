@@ -90,11 +90,17 @@ app.get("/ticket", (req, res)=>{
 app.post("/buy",  (req: Request, res: Response)=>{
 
     const end = buyRequestDuration.startTimer()
-    totalBuyRequests.inc();
+
+    let status = "failed"    //default assumption, for using it inside finally we need to store status as a variable asw
+
+    try {
 
     //first authenticate user via function made
     const userId = extractUserId(req);
     if(!userId){
+        totalBuyRequests.labels("failed").inc();
+        totalPurchaseFailures.labels("missing_user").inc()
+        end( {status: "failed"} )
                     res.status(400).json({message: "no user id found"});
 
         logger.warn({
@@ -111,22 +117,33 @@ app.post("/buy",  (req: Request, res: Response)=>{
         ticketId: ticketId
     }, "1 ticket purchase attempt")
     if(!ticketId ){
+            totalBuyRequests.labels("failed").inc()
+          totalPurchaseFailures.labels("sold_out").inc()
+
+          end({ status: "failed" })
         res.status(400).json({message: "no tickets remaining"})
+        
         logger.warn({
             event: "purchase_failed_sold_out"
         }, "no ticket left" )
         return
     }
 
-
+    totalBuyRequests.labels("success").inc()   //this is the success path:
     ticketsRemainingGauge.set(getTickets());
-    end();
+    status = "success" //set status as success if it goes down success path (to use this as a variable inside of finally )
+    end( {status: "success"} )
     //else we buy a ticket ( function )
     logger.info({
         event: "ticket_purchased",
         ticketId : ticketId.ticketId
     }, "Ticket succesfully bought")
     res.json({status: "success", ticketId : ticketId?.ticketId})
+    }
+
+    finally {
+        end( {status})
+    }
 })
 
 
