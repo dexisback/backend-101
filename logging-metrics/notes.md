@@ -1,0 +1,1 @@
+- a combination of pino and pino-http is used in startups. pino for the lib/core business logic AND pino-http for logging incoming requests 

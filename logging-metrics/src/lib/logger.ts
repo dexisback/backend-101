@@ -1,25 +1,18 @@
-//creates a single logger instance
-//configure log level
-//export it/broadcast it for the whole app
 
+//this is base logger, we will use pino-pretty
 
 import pino from "pino";
-export const logger = pino({
-    level: process.env.LOG_LEVEL || "info",
 
-    base: {
-        service: "api-stress-lab"
-    },
-    
-    timestamp: pino.stdTimeFunctions.isoTime
+
+export const logger = pino({
+    level: "info",
+    transport: {
+        target: "pino-pretty",
+        options: {
+            colorize: true,
+            translateTime: "SYS:standard"
+        }
+    }
 })
 
-
-//example log produced fromt his: 
-// {
-//     "level" :30,
-//     "time": "some time",
-//     "service": "api name",
-//     "event": "event name"
-
-// }
+//so something like export const prisma 
