@@ -28,6 +28,9 @@ export function getTickets() {
 
 export function buyTicket(){
     if(remainingTickets <= 0 ){
+        logger.warn({
+            event: "tickets_sold_out"
+        })
         return null
     }
 
@@ -54,7 +57,10 @@ export function extractUserId(req: Request): string | undefined {
 
 app.get("/ticket", (req, res)=>{
     const remaining = getTickets();
-    logger.info({remaining_tickets: remaining}, "Ticket count checked")
+    logger.info({
+        event: "tickets_checked",
+        remainingTickets: remaining
+    }, "Ticket count checked")
     res.json({ remaining })
 })
 
@@ -72,8 +78,14 @@ app.post("/buy",  (req: Request, res: Response)=>{
         return; 
     }
 
-    const ticket = buyTicket();
-    if(!ticket ){
+    const ticketId = buyTicket();
+    //improvement: bought a ticket, so logger.info, if ticket fails we dont care we have warn anyways. but this should be broadcasted
+    logger.info({
+        event: "ticket_purchased",
+        requestId: userId,
+        ticketId: ticketId
+    }, "1 ticket purchase attempt")
+    if(!ticketId ){
         res.status(400).json({message: "no tickets remaining"})
         logger.warn({
             event: "purchase_failed_sold_out"
@@ -83,9 +95,9 @@ app.post("/buy",  (req: Request, res: Response)=>{
     //else we buy a ticket ( function )
     logger.info({
         event: "ticket_purchased",
-        ticketId : ticket.ticketId
+        ticketId : ticketId.ticketId
     }, "Ticket succesfully bought")
-    res.json({status: "success", ticketId : ticket?.ticketId})
+    res.json({status: "success", ticketId : ticketId?.ticketId})
 })
 const PORT = 3000
 
