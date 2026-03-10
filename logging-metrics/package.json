@@ -2,21 +2,24 @@
   "name": "logging-metrics",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsx src/app.ts",
+    "build": "tsc",
+    "start": "node dist/app.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "devDependencies": {
     "@types/node": "^25.4.0",
+    "@types/uuid": "^11.0.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "crypto": "^1.0.1",
     "pino": "^10.3.1",
     "uuid": "^13.0.0"
   }
