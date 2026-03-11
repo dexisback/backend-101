@@ -1,189 +1,180 @@
-# Rate Limiter Playground (TypeScript + Express + Redis)
+# Rate Limiter:
 
-implementation of rate limiting -- 3 endpoints with 3 different algorithms 
-
-- `/api/login-test` -> Sliding Window
-- `/api/search-test` -> Token Bucket
-- `/api/overall-test` -> Fixed Window
+A backend that implements three distinct rate-limiting algorithms from scratch on top of Redis
 
 
-## Modular Architecture:
+## Why This Project Exists
 
-feature-based  rate limiter module under `src/module/rate-limit/`  wired w an Express app.
+built to practice:
 
+- implementing rate-limiting algorithms directly using Redis primitives (`INCR`, `EXPIRE`, `ZADD`, `ZCARD`, `HSET`, `HGETALL`)
+- understanding the failure modes and burst-handling characteristics of each algorithm
+- designing a generic, composable middleware factory (`createRateLimiter`) that accepts any algorithm config
+- setting standard rate-limit response headers (`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, `Retry-After`)
 
-The module has 4 main parts:
-- `rateLimit.types.ts` -> TypeScript contracts for configs/results
-- `rateLimit.algorithm.ts` -> algorithm implementations (fixed/sliding/token bucket)
-- `rateLimit.middleware.ts` -> common middleware that chooses algorithm and sets headers
-- `rateLimit.routes.ts` -> test endpoints and config per endpoint
-
----
-
-- `src/app.ts` -> Express app + route mount
-- `src/server.ts` -> server startup
-- `src/config/env.ts` + `src/db/redis.ts` -> env validation and Redis connection
-
-## Endpoints:
-
-### 1) `/api/login-test` (Sliding Window)
-
-This is the stricter option for login-like endpoints.
-
-- login is security-sensitive.
-- makes sense to avoid window boundary bursts (fixed window) for login.
-- sliding window checks true recent history (last N seconds), not calendar buckets.
-
-Config:
-- `algorithm: "sliding"`
-- `limit: 10`
-- `window: 30` seconds
-- keyed by IP (`req.ip`)
-
-### 2) `/api/search-test` (Token Bucket)
+Each algorithm is demonstrated against a different endpoint pattern to highlight where each one fits.
 
 
+## Algorithms explained:
 
-Why I used it:
+### Fixed Window
 
-- sarch traffic is often bursty (user typing / UI interactions).
-- token bucket allows controlled bursts while enforcing average rate.
-
-
-Config:
-
-- `algorithm: "tokenBucket"`
-- `limit: 20` (bucket capacity)
-- `refill: 5` tokens/sec
-- keyed by IP
-
-### 3) `/api/overall-test` (Fixed Window)
-
-- global guardrail/protection.
-- good baseline protection for overall traffic.
-
-Config idea in this project:
-
-- `algorithm: "fixed"`
-- `limit: 5`
-- `window: 10` seconds
-- keyed by IP
-
-
-## How each algorithm is implemented:
-
-## Fixed Window (Redis counter + expiry)
-
-1. Increment Redis counter for key.
-2. If first hit, set key expiry to window size.
-3. Allow if `current <= limit`.
-4. Use TTL to compute reset time.
-
-## Sliding Window (Redis sorted set)
-
-1. Remove old timestamps outside the window.
-2. Add current request timestamp to sorted set.
-3. Count active entries in the window.
-4. Allow if count is within limit.
-5. Compute reset time using oldest active timestamp.
-
-## Token Bucket (Redis hash state)
-
-1. Read previous state.
-2. Refill tokens based on elapsed time.
-3. Cap at capacity (`limit`).
-4. Consume 1 token if available.
-5. Allow if token existed; else block.
-6. Persist updated state and set expiry.
-
----
-
-## Middleware behavior (common across all endpoints)
-
-`createRateLimiter(...)` in `rateLimit.middleware.ts` does this:
-
-1. Build identity key (`prefix + identity`).
-2. Route to selected algorithm.
-3. Set standard rate limit headers:
-   - `X-RateLimit-Limit`
-   - `X-RateLimit-Remaining`
-   - `X-RateLimit-Reset`
-4. If blocked, return `429` + `Retry-After`.
-5. Otherwise call `next()`.
-
-
-
-### Folder structure:
-
-```txt
-src/
-  app.ts
-  server.ts
-  config/
-    env.ts
-  db/
-    redis.ts
-  module/
-    rate-limit/
-      rateLimit.types.ts
-      rateLimit.algorithm.ts
-      rateLimit.middleware.ts
-      rateLimit.routes.ts
+```
+INCR rate_limit:prefix:identity
+if count == 1: EXPIRE key window
+if count > limit: 429
 ```
 
+A counter increments per request within a fixed time window. Simple and cheap. Weakness: burst traffic at window boundaries (e.g. 100 requests at the end of one window + 100 at the start of the next — effectively 200 in a short span).
 
-## run:
+### Sliding Window
 
-1. Ensure Redis is running. 
-2. Add `.env` with:
+```
+ZREMRANGEBYSCORE key 0 (now - windowMs)
+ZADD key now <unique_member>
+ZCARD key  ->  count
+if count > limit: 429
+```
 
-```env
+Each request is stored as a scored set member (score = timestamp). Stale entries outside the window are pruned on every request. The result is a true rolling window with no boundary burst problem. Uses more memory than fixed window — each request is a set entry.
+
+### Token Bucket
+
+```
+state = HGETALL key (tokens, lastRefill)
+elapsed = (now - lastRefill) / 1000
+newTokens = min(capacity, prevTokens + elapsed * refillRate)
+if newTokens >= 1: allow, consume 1 token
+HSET key { tokens: updated, lastRefill: now }
+EXPIRE key (capacity / refill) * 2
+```
+
+Models tokens refilling at a constant rate up to a capacity ceiling. Allows bursts (up to capacity) while smoothing sustained traffic to the refill rate. State is stored in a Redis hash; no expiry management needed beyond the cleanup TTL.
+
+## Architecture Flow
+
+```text
+HTTP Request
+   -> createRateLimiter(config) middleware
+      -> keyGenerator(req)  ->  identity (e.g. req.ip)
+         -> Redis algorithm execution
+            -> RateLimitResult { allowed, remaining, resetAt }
+               -> Set response headers
+                  -> 429 or next()
+```
+
+## Tech Stack
+
+- Runtime: Node.js, Express 5, TypeScript
+- Store: Redis (node `redis` v5)
+- ORM: Prisma v7 (with Neon adapter — present for future persistence needs)
+- Validation: Zod v4
+- Dev: `tsx`
+
+## Quick Start
+
+### 1) Configure environment
+
+```
+DATABASE_URL=your_postgres_connection_string
 REDIS_URL=redis://localhost:6379
 ```
 
-3. Start server:
+### 2) Install and run
 
 ```bash
+npm install
 npm run dev
 ```
 
-Server starts on `http://localhost:3000` by default.
+API base URL: `http://localhost:3000`
 
-## Quick test with curl
+## API Surface
 
-```bash
-curl -i http://localhost:3000/api/login-test
-curl -i http://localhost:3000/api/search-test
-curl -i http://localhost:3000/api/overall-test
+| Method | Path | Algorithm | Config |
+|---|---|---|---|
+| `GET` | `/overall-test` | Fixed Window | 5 req / 10s per IP |
+| `GET` | `/login-test` | Sliding Window | 10 req / 30s per IP |
+| `GET` | `/search-test` | Token Bucket | capacity 20, refill 5 tokens/s per IP |
+
+Each route uses a different algorithm to reflect realistic use-case intent: a global fixed cap, a strict credential-endpoint rolling guard, and a burst-tolerant search throttle.
+
+## Response Headers
+
+Every response (allowed or rejected) includes:
+
+| Header | Meaning |
+|---|---|
+| `X-RateLimit-Limit` | Max requests allowed in the window |
+| `X-RateLimit-Remaining` | Requests left before hitting the limit |
+| `X-RateLimit-Reset` | Unix timestamp (seconds) when the limit resets |
+| `Retry-After` | Seconds until the client may retry (429 responses only) |
+
+### 429 Response Body
+
+```json
+{
+  "success": false,
+  "message": "Too many requests"
+}
 ```
 
-To trigger rate limits quickly:
+## Middleware Factory
 
-1: Login (sliding window):
-```bash
-for i in {1..11}; do
-  echo "login request $i"
-  curl -i http://localhost:3000/api/login-test
-  echo ""
-done
+`createRateLimiter(config)` returns a standard Express middleware. Config shape by algorithm:
+
+```typescript
+// Fixed Window
+{ algorithm: "fixed", limit: number, window: number, prefix?: string, keyGenerator: (req) => string }
+
+// Sliding Window
+{ algorithm: "sliding", limit: number, window: number, prefix?: string, keyGenerator: (req) => string }
+
+// Token Bucket
+{ algorithm: "tokenBucket", limit: number, refill: number, prefix?: string, keyGenerator: (req) => string }
 ```
 
+`keyGenerator` controls what constitutes an "identity" — `req.ip` for IP-based limiting, `req.headers['x-user-id']` for user-based, etc. `prefix` namespaces the Redis key so multiple limiters don't interfere.
 
-2: Search (token bucket):
-```bash
-for i in {1..40}; do
-  echo "search request $i"
-  curl -i http://localhost:3000/api/search-test
-  echo ""
-done
+Redis key format: `rate_limit:<prefix>:<identity>`
+
+## Algorithm Tradeoff Summary
+
+| | Fixed Window | Sliding Window | Token Bucket |
+|---|---|---|---|
+| Redis structure | String (counter) | Sorted Set | Hash |
+| Memory per user | O(1) | O(requests in window) | O(1) |
+| Burst handling | Boundary burst possible | Smooth, no boundary burst | Burst up to capacity |
+| Precision | Low (window-aligned) | High (true rolling) | High (time-proportional) |
+| Best for | Broad global caps | Login / sensitive endpoints | Search, API tier limits |
+
+## Project Structure
+
+```text
+.
+├── src/
+│   ├── app.ts
+│   ├── server.ts
+│   ├── config/
+│   ├── db/
+│   └── module/
+│       └── rate-limit/
+│           ├── rateLimit.algorithm.ts
+│           ├── rateLimit.middleware.ts
+│           ├── rateLimit.routes.ts
+│           ├── rateLimit.types.ts
+│           └── rateLimit.constants.ts
+├── prisma/
+│   └── schema.prisma
+├── prisma.config.ts
+├── package.json
+└── tsconfig.json
 ```
 
-3: Overall (fixed window):
+---
 
-```bash
-for i in {1..6}; do
-  echo "overall request $i"
-  curl -i http://localhost:3000/api/overall-test
-  echo ""
-done
-```
+NOTE: Intentional gaps; the focus here was understanding the mechanics of each rate-limiting algorithm, NOT a production-grade throttling system.
+
+## License
+
+ISC

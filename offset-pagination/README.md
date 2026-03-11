@@ -198,7 +198,6 @@ Offset pagination is the right call when the dataset is small-to-medium, random 
 
 NOTE: Intentional gaps; the focus here was understanding the offset pagination 
 
-
 ## License
 
 ISC
