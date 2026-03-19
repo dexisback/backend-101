@@ -7,7 +7,7 @@ import responseTime from "response-time";   //external lib to calculate response
 import { globalErrorHandler } from "./middleware/globalErrorHandler.middleware.js";
 import { register } from "./metrics/metrics.js";
 import { totalBuyRequests, totalPurchaseFailures, ticketsRemainingGauge, buyRequestDuration } from "./metrics/metrics.js";
-
+import { canonicalRequestLogger } from "./middleware/canonicalMiddleware.middleware.js";
 
 //because we need to use req.log.something inside of the exported functions asw, so we need to pass it inside the functions first using types
 import type { Logger } from "pino";
@@ -20,7 +20,7 @@ app.use(express.json());
 app.use(responseTime());
 
 //request logger middleware:
-app.use(requestLogger)
+app.use(canonicalRequestLogger)
 
 
 
@@ -33,11 +33,16 @@ export function getTickets() {
 
 //buy ticket does NOT concern itself with logging anymore, every logging would be done inside of GET endpoint 
 export function buyTicket(){
+
+    console.log("buy ticket is running????🌹🌹🌹🌹")
     if(remainingTickets <= 0 ){      return null}
     //else:
+    console.log(remainingTickets+ "before 😭😭😭😭😭");
     remainingTickets--
+    console.log(remainingTickets+ "after 😋😋😋😋😋");
+
     return {
-        ticketId: `ticket_${remainingTickets}`
+        ticketId: `ticket_${remainingTickets}` , remainingTickets
     }
 }
 
@@ -46,7 +51,6 @@ export function extractUserId(req: Request): string | undefined {
     const data = req.header("x-user-id");
     if(!data){
         return;
-        //Todo: warn ? ⚠️
     }
     //else
         const userId = data?.trim() //whitespace:
@@ -77,10 +81,12 @@ app.get("/health", (req, res)=>{
 app.get("/ticket", (req: Request, res: Response)=>{
     const remaining = getTickets();
 
-    req.log.info({
-        event: "tickets_checked",
-        remainingTickets: remaining
-    }, "Ticket count checked")
+    // req.log.info({
+    //     event: "tickets_checked",
+    //     remainingTickets: remaining
+    // }, "Ticket count checked")
+    // res.json({ remaining })
+    req.log.info({event: "ticket.inventory.checked", remainingTickets: remaining}, "Ticket count checked")
     res.json({ remaining })
 })
 
@@ -101,29 +107,35 @@ app.post("/buy",  (req: Request, res: Response)=>{
         totalPurchaseFailures.labels("missing_user").inc()
                     res.status(400).json({message: "no user id found"});
 
-        req.log.warn({
-            event: "user_not_found", requestId            
-        }, "userId not attached")
+        // req.log.warn({
+        //     event: "user_not_found", requestId            
+        // }, "userId not attached")
+        req.log.warn({event: "auth.user.missing", requestId, reason: "missing_x_userId"}, 
+            "userId not attached"
+        )
         return; 
     }
 
     const ticketId = buyTicket();  
     //changed; logger.info changed to req.log.info. //in /buy endpoint, userId and requestId need to be separate because of obvious reasons
-    req.log.info({
-        event: "ticket_purchase_attempt",
-        userId: userId,
-        requestId, //earlier requestId was marketed as userId (fake gimmick idk why)
-        ticketId: ticketId
-    }, "1 ticket purchase attempt")
+    // req.log.info({
+    //     event: "ticket_purchase_attempt",
+    //     userId: userId,
+    //     requestId, //earlier requestId was marketed as userId (fake gimmick idk why)
+    //     ticketId: ticketId
+    // }, "1 ticket purchase attempt")
+    req.log.info({event: "ticket.purchase.attempt", requestId, userId}, "Ticket purchase attempt")
     if(!ticketId ){
             totalBuyRequests.labels("failed").inc()
           totalPurchaseFailures.labels("sold_out").inc()
 
         res.status(400).json({message: "no tickets remaining"})
         
-    req.log.warn({
-            event: "purchase_failed_sold_out", requestId
-        }, "no ticket left" )
+    // req.log.warn({
+    //         event: "purchase_failed_sold_out", requestId
+    //     }, "no ticket left" )
+
+    req.log.warn({event: "ticket.purchase.failed", requestId, reason: "sold_out"}, "No ticket left")
         return
     }
 
@@ -131,10 +143,12 @@ app.post("/buy",  (req: Request, res: Response)=>{
     ticketsRemainingGauge.set(getTickets());
     status = "success" //set status as success if it goes down success path (to use this as a variable inside of finally )
     //else we buy a ticket ( function )
-req.log.info({
-        event: "ticket_purchased", requestId,
-        ticketId : ticketId.ticketId
-    }, "Ticket succesfully bought")
+// req.log.info({
+//         event: "ticket_purchased", requestId,
+//         ticketId : ticketId.ticketId
+//     }, "Ticket succesfully bought")
+
+req.log.info({event: "ticket.purchase.success", requestId, ticketId: ticketId.ticketId, userId }, "Ticket succesfully bought")
     res.json({status: "success", ticketId : ticketId?.ticketId})
     }
 
