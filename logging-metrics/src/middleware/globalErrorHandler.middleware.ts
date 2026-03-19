@@ -1,11 +1,11 @@
 import type { Request, Response, NextFunction } from "express";
-import { logger } from "../lib/logger.js";
 
 export function globalErrorHandler(err: any, req: Request, res: Response, next: NextFunction) {
-    logger.error({
+    req.log.error({
         event: "unhandled_error",
         error: err.message ,
-        stack: err.stack
+        stack: err.stack,
+        requestId: String(req.id)
     })
 
     res.status(500).json({
@@ -16,4 +16,3 @@ export function globalErrorHandler(err: any, req: Request, res: Response, next: 
 
 
 
-//this ensures pino caputes unknown erorrs and stack traces
