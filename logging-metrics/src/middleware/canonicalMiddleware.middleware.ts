@@ -7,7 +7,7 @@ import { logger } from "../lib/logger.js";
 export function canonicalRequestLogger(req: Request, res: Response, next: NextFunction){
     const incomingRequest = req.headers["x-request-id"];
     const headerId = Array.isArray(incomingRequest) ? incomingRequest[0] : incomingRequest;
-    const requestId = (headerId && headerId.trim() || randomUUID() ) 
+    const requestId = String(req.id ?? ((headerId && headerId.trim()) || randomUUID()))
     req.id = requestId //attaching because /buy and errorHandler needs to read it from req
     res.setHeader("x-request-id", requestId);
 

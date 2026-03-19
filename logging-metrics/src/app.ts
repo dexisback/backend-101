@@ -20,6 +20,7 @@ app.use(express.json());
 app.use(responseTime());
 
 //request logger middleware:
+app.use(requestLogger)
 app.use(canonicalRequestLogger)
 
 
