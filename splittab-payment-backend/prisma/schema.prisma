@@ -11,3 +11,51 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+//tabMember = a single person in the group
+//tab -> represents the entire group
+
+
+model Payment {
+  id                String           @id @default(cuid())
+  tabMemberId       String           @unique
+  razorpayOrderId   String           @unique
+  status            PaymentStatus    @default(PENDING)
+
+  tabMember         TabMember        @relation(fields: [tabMemberId], references: [id])
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  
+}
+
+
+
+enum PaymentStatus {
+  PENDING 
+  PAID
+  FAILED
+  REFUNDED
+}
+
+// a tab would contain tabId, amount to be split, creds, and members amongst which to be split
+model Tab  {
+  id             String      @id @default(cuid())
+  totalAmount    Int 
+  createdAt      DateTime    @default(now())
+  members        TabMember[]
+}
+
+
+
+//a single member 
+model TabMember {
+  id              String            @id @default(cuid())
+  tabId           String  
+  amount          Int 
+  tab             Tab               @relation(fields: [tabId], references: [id])
+  payment         Payment?
+  createdAt       DateTime          @default(now())
+}
+
+
