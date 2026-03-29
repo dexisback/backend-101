@@ -11,7 +11,7 @@ app.use("/webhook", webhookRoutes)
 //now can use json parsing for normal routes
 app.use(express.json())
 
-app.get("/", (_req: Request, res: Response)=>{
+app.get("/", (req: Request, res: Response)=>{
     res.send("ok running ")
 }) //no req just sending
 

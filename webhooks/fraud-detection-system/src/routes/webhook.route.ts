@@ -7,6 +7,6 @@ const router = express.Router();
 
 //raw body parser:
 
-router.post("/:provider", express.raw({type: "/*"}), webhookHandler)
+router.post("/:provider", express.raw({type: "application/json"}), webhookHandler)
 
 export default router;

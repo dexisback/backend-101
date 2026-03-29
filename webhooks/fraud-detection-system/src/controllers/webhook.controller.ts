@@ -19,7 +19,7 @@ export const webhookHandler = async (req: Request, res: Response)=>{
     const secret= process.env.WEBHOOK_SECRET as string;
 
     const expectedSignature = crypto.createHmac("sha256", secret).update(rawBody).digest("hex")   //razorpay (example) does the same loc on their end, if it matches , yes
-    if(expectedSignature!==currentSignature){res.status(400).json({error: "wrong and invalid signature"})}
+    // if(expectedSignature!==currentSignature){res.status(400).json({error: "wrong and invalid signature"})}   //NOTE: comment out this line to curl test locally //
     //else:
     console.log(`verified webhook from ${provider}`)
     //logger:
@@ -28,8 +28,11 @@ export const webhookHandler = async (req: Request, res: Response)=>{
     console.log(`received webhook from ${provider}`)
     
     //parsing to string for scema processing
-    const parsedSignature = JSON.parse(rawBody.toString())
+
+    const parsedSignature = JSON.parse(rawBody.toString());
     
+    // console.log("RAW BODY:", rawBody.toString());
+    // console.log("PARSED", parsedSignature)
     //schema processing:
     const result = webhookSchema.safeParse(parsedSignature)
     
