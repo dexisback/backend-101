@@ -35,3 +35,10 @@ export default app;
 
 //worker.on failure event handler -> without updating the status, the event stays pending forever,
 //NOTE: if worker crashes mid processing, job gets retried automatically, no data loss 
+
+
+
+//TODO: event.service.ts -> add createEvent() , updateEventStatus(), getEventById() instead of prisma logic in controller
+//TODO: idempotency.service.ts -? should handler checkDuplicate(eventId) instead of in controller
+//TODO: event.types.ts -> should define types , instead of raw string (right now)
+//TODO:
