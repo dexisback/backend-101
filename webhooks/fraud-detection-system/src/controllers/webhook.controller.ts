@@ -3,6 +3,9 @@ import crypto from "crypto"
 import { webhookSchema } from "../validators/webhook.schema.js";
 import {prisma} from "../lib/prisma.js";
 import { error } from "console";
+import { enqueueEvent } from "../services/queue.service.js";
+
+
 
 export const webhookHandler = async (req: Request, res: Response)=>{
     const provider = req.params.provider; //take out the provider (github/saas webhook/stripe/etc etc)
@@ -37,6 +40,14 @@ export const webhookHandler = async (req: Request, res: Response)=>{
                 payload: finalworkingData.payload
             }
         })
+        //push in the queue (enqueue) from qeuueService:
+        await enqueueEvent({
+            eventId: finalworkingData.payload.id,
+            type: finalworkingData.event,
+            payload: finalworkingData.payload
+        })
+
+        
     } catch (err: any) {
         if(err.code === "P2002"){return res.status(200).json({message: "duplicate event/webhook ignored"})}
             throw error

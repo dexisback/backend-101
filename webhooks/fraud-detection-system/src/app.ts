@@ -25,3 +25,6 @@ export default app;
 //therefore, we have db-level idempotency -> instead of if(exists) -> skip ,  we implement: insert -> DB enforces uniqueness
 // 1: in webhook routes: why express.raw? HMAC related signature verificatoin needs: HMAC(secret, raw_body) and hence not json parsing it
 
+//3: enqueue event -> worker might fail because of temporary DB issue, redis issue, or network glitch, therefore trying the job 3 times max, if it keeps failing, we mark it as fial
+//backoff: without backoff retry happens immediately, exponential backoff means delay in retry = 2^attempt. therefore 1st attempt after 1 sec, 2nd after 2s, 3rd after 4s
+//why exponential decay better/ gives system time to recover, reduces load during failure spikes
