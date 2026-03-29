@@ -14,3 +14,33 @@ datasource db {
 
 
 //schema:
+model Event {
+  id         String   @id @default(uuid())
+  eventId    String   @unique
+  provider   String
+  type       String
+  payload    Json
+  status     EventStatus @default(PENDING)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  alerts     Alert[]
+}
+
+model Alert {
+  id        String   @id @default(uuid())
+  eventId   String
+  reason    String
+  createdAt DateTime @default(now())
+
+  event     Event @relation(fields: [eventId], references: [eventId])
+}
+
+enum EventStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+
+//some event is received, alert is sent to the user, and event has statuses as enum
