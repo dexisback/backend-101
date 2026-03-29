@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import crypto from "crypto"
+import { webhookSchema } from "../validators/webhook.schema.js";
 
 export const webhookHandler = async (req: Request, res: Response)=>{
     const provider = req.params.provider; //take out the provider (github/saas webhook/stripe/etc etc)
@@ -12,9 +13,18 @@ export const webhookHandler = async (req: Request, res: Response)=>{
     if(expectedSignature!==currentSignature){res.status(400).json({error: "wrong and invalid signature"})}
     //else:
     console.log(`verified webhook from ${provider}`)
-
-
     console.log(`received webhook from ${provider}`)
+    
+    //parsing to string for scema processing
+    const parsedSignature = JSON.parse(rawBody.toString())
+    
+    //schema processing:
+    const result = webhookSchema.safeParse(parsedSignature)
+    if(!result.success){return res.status(400).send({error: "invalid payload, failed zod validation"})} 
+    //else:
+    const finalworkingData =result.data
+    console.log(`valid webhook ${finalworkingData.event}`)
+
 
     res.status(200).json({message: "webhook received", receivedStatus: true})
 }
