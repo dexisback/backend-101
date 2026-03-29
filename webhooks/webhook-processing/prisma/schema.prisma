@@ -14,3 +14,21 @@ datasource db {
 
 
 //schema:
+model Build {
+  id         String   @id @default(uuid())
+  repoName   String
+  commitId   String   @unique
+  branch     String
+  author     String
+  status     BuildStatus @default(PENDING)
+  logs       Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum BuildStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
