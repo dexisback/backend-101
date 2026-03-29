@@ -4,7 +4,7 @@ import { webhookSchema } from "../validators/webhook.schema.js";
 import {prisma} from "../lib/prisma.js";
 import { error } from "console";
 import { enqueueEvent } from "../services/queue.service.js";
-
+import { logger } from "../lib/logger.js";
 
 
 export const webhookHandler = async (req: Request, res: Response)=>{
@@ -18,6 +18,9 @@ export const webhookHandler = async (req: Request, res: Response)=>{
     if(expectedSignature!==currentSignature){res.status(400).json({error: "wrong and invalid signature"})}
     //else:
     console.log(`verified webhook from ${provider}`)
+    //logger:
+    logger.info("Webhook received", { provider });
+
     console.log(`received webhook from ${provider}`)
     
     //parsing to string for scema processing
@@ -25,6 +28,7 @@ export const webhookHandler = async (req: Request, res: Response)=>{
     
     //schema processing:
     const result = webhookSchema.safeParse(parsedSignature)
+    
     if(!result.success){return res.status(400).send({error: "invalid payload, failed zod validation"})} 
     //else:
     const finalworkingData =result.data
@@ -47,7 +51,7 @@ export const webhookHandler = async (req: Request, res: Response)=>{
             payload: finalworkingData.payload
         })
 
-        
+
     } catch (err: any) {
         if(err.code === "P2002"){return res.status(200).json({message: "duplicate event/webhook ignored"})}
             throw error
