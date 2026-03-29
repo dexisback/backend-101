@@ -32,3 +32,6 @@ export default app;
 
 //fraud logic -> only two rules in this repo, real systems might user per-user tracking/velocity checks/ip and device fingerprintign / ML models / etc
 //rule 2 in fraud detection rules is basically burst detection logic
+
+//worker.on failure event handler -> without updating the status, the event stays pending forever,
+//NOTE: if worker crashes mid processing, job gets retried automatically, no data loss 

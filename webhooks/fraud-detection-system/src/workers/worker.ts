@@ -1,6 +1,7 @@
 import { Worker } from "bullmq";
 import { redis } from "../lib/redis.js";
 import { handlePaymentEvent } from "./handlers/payment.handler.js";
+import { prisma } from "../lib/prisma.js";
 
 const worker = new Worker("events", async(job)=>{
     const { eventId, type, payload } = job.data;
@@ -24,8 +25,14 @@ worker.on("completed", (job)=>{
     console.log(`job completed ${job.id}`)
 })
 
-worker.on("failed", (job)=>{
-    console.log(`job failed ${job?.id}, err`)
+worker.on("failed", async (job, err)=>{
+    console.error(`Job failed: ${job?.id}`, err)
+    if(!job){return }
+    //else: update the status in DB
+    await prisma.event.update({
+        where: {eventId: job.data.eventId},
+        data: {status: "FAILED"}
+    })
 })
 
 
