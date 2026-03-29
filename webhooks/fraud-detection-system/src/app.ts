@@ -20,5 +20,8 @@ export default app;
 
 //self notes below:
 //1: webhook route: exposes a general :provider route, this provider can be anything (stripe/razorpay/github cicd/etcetc) , middleware runs before controller, stores the raw body needed for signature verification, webhookHandler is the final function which handles whatever actually happens with the incoming webhook (in webhook controller (actual handling logic lies her))
-//2: webhook controller: takes in the rawbody and the provider from req, does whatever is needed w it (verify signature of incoming webhook, idempotency check , stores event, enqueues the job)
+//2: webhook controller: takes in the rawbody and the provider from req, does whatever is needed w it (verify signature of incoming webhook, idempotency check , stores event, enqueues the job) -> currently contains all the things which will happen with the webhook once received (verification etc etc, to be refactored later on)
+//bonus: idempotency syste: prevents duplicate processing of same webhook (event @unique in prisma, while prisma inserting -> if duplicate -> error)  (prisma gives P2002 erorr if repeated thing)
+//therefore, we have db-level idempotency -> instead of if(exists) -> skip ,  we implement: insert -> DB enforces uniqueness
 // 1: in webhook routes: why express.raw? HMAC related signature verificatoin needs: HMAC(secret, raw_body) and hence not json parsing it
+
