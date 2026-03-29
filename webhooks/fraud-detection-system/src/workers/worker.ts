@@ -1,11 +1,21 @@
 import { Worker } from "bullmq";
 import { redis } from "../lib/redis.js";
+import { handlePaymentEvent } from "./handlers/payment.handler.js";
 
 const worker = new Worker("events", async(job)=>{
     const { eventId, type, payload } = job.data;
     console.log(`processing job: ${eventId}, ${type}`)
+    //routing logic:
 
-    //placeholder -> we will replace with event handlers
+    switch(type) {
+        case "payment.captured":
+        case "payment.failed": await handlePaymentEvent(eventId, type, payload);
+        break;
+
+        default:
+            console.log(`unhandled event type ${type}`)
+    }
+    
 },
 {connection: redis}
 )

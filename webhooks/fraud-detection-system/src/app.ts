@@ -28,3 +28,7 @@ export default app;
 //3: enqueue event -> worker might fail because of temporary DB issue, redis issue, or network glitch, therefore trying the job 3 times max, if it keeps failing, we mark it as fial
 //backoff: without backoff retry happens immediately, exponential backoff means delay in retry = 2^attempt. therefore 1st attempt after 1 sec, 2nd after 2s, 3rd after 4s
 //why exponential decay better/ gives system time to recover, reduces load during failure spikes
+//why switch(type) in worker.ts ? because scalable, right now implemented only for payment , later for other providers asw
+
+//fraud logic -> only two rules in this repo, real systems might user per-user tracking/velocity checks/ip and device fingerprintign / ML models / etc
+//rule 2 in fraud detection rules is basically burst detection logic
