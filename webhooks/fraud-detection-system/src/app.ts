@@ -41,4 +41,3 @@ export default app;
 //TODO: event.service.ts -> add createEvent() , updateEventStatus(), getEventById() instead of prisma logic in controller
 //TODO: idempotency.service.ts -? should handler checkDuplicate(eventId) instead of in controller
 //TODO: event.types.ts -> should define types , instead of raw string (right now)
-//TODO:

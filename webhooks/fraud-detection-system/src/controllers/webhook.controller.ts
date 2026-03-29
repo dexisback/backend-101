@@ -8,7 +8,11 @@ import { logger } from "../lib/logger.js";
 
 
 export const webhookHandler = async (req: Request, res: Response)=>{
-    const provider = req.params.provider; //take out the provider (github/saas webhook/stripe/etc etc)
+    const providerParam = req.params.provider;
+    const provider = Array.isArray(providerParam) ? providerParam[0] : providerParam; //take out the provider (github/saas webhook/stripe/etc etc)
+    if (!provider) {
+        return res.status(400).json({ error: "missing provider" });
+    }
     const rawBody = req.body; //rawbody 
     //verify signature code lies in controller for now, TODO: thin out controller later on and verify logic in anothe file ⚠️⚠️⚠️
     const currentSignature = req.headers["x-razorpay-signature"] as string
