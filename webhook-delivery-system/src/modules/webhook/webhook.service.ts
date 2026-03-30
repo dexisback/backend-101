@@ -1,6 +1,12 @@
-import {prisma} from "../../db/prisma.js"
-import type { createWebhookInput } from "./webhook.schema.js"
+import { prisma } from "../../db/prisma.js";
+import type { createWebhookInput as CreateWebhookInput } from "./webhook.schema.js";
 
-export async function createWebhook(data: createWebhookInput){
-    return prisma.webhook.create({data})
+export async function createWebhook(data: CreateWebhookInput) {
+	return prisma.webhook.create({
+		data: {
+			url: data.url,
+			event: data.event,
+			secret: data.secret,
+		},
+	});
 }

@@ -4,7 +4,7 @@
 
 import Fastify from "fastify"
 import { webhookRoutes } from "./modules/webhook/webhook.routes.js"
-
+import {eventRoutes} from "./modules/event/event.routes.js"
 export const app = Fastify({
     logger: true
 })
@@ -12,6 +12,7 @@ export const app = Fastify({
 
 
 app.register(webhookRoutes)
+app.register(eventRoutes)
 
 
 
