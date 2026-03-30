@@ -11,6 +11,6 @@ export const githubPushEventSchema = z.object({
 })
 
 
-export const eventhSchema = z.discriminatedUnion("type", [githubPushEventSchema])
+export const eventSchema = z.discriminatedUnion("type", [githubPushEventSchema])
 
-export type Event = z.infer<typeof eventhSchema>
+export type Event = z.infer<typeof eventSchema>

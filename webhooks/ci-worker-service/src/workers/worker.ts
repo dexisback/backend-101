@@ -1,13 +1,18 @@
-import { tryCatch, Worker } from "bullmq";
-import { RedisConnection } from "bullmq";
+import {  Worker } from "bullmq";
 import {env} from "../config/env"
 import {prisma} from "../db/prisma"
 import { runCIPipeline } from "./pipelines/ci.pipeline";
 import { log } from "../utils/logger";
 import { redisConnection } from "../config/redis";
-
+import { eventSchema } from "../validators/event.schema";
 export const worker = new Worker(env.QUEUE_NAME, async(job)=>{
-    const event = job.data;
+       const parsedData = eventSchema.safeParse(job.data);
+        if(!parsedData.success){
+            log("invalid event payload", parsedData.error);
+            return
+        }
+        const event = parsedData.data;
+    
 
     if(event.type!=="github.push"){return}
     //else:
@@ -27,16 +32,23 @@ export const worker = new Worker(env.QUEUE_NAME, async(job)=>{
     })
 
     try {
-        await runCIPipeline(build.id)
+        //mark running , before execution:
+        
+     
 
         await prisma.build.update({
         where: { id: build.id },
-        data: { status: "SUCCESS" },
+        data: { status: "RUNNING" },
       });
 
-      log("Bulid success", build.id)
 
-
+      //run pipeline: 
+      await runCIPipeline(build.id);
+      //success:
+      
+      await prisma.build.update({
+        where: {id: build.id}, data: {status: "SUCCESS"}
+      })
     } catch (err) {
         await prisma.build.update({
             where: {id: build.id}, data:{status: "FAILED"}
