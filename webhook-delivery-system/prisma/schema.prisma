@@ -13,3 +13,51 @@ datasource db {
 }
 
 //schema:
+
+model Webhook{
+   id          String       @id @default(cuid())
+   url         String
+   event       String  
+   secret      String     //for HMAC signing:
+   createdAt   DateTime     @default(now()) 
+
+   deliveries   Deliverylog[]
+}
+
+
+model Event {
+  id           String       @id @default(cuid())
+  type         String 
+  payload      Json
+  createdAt    DateTime      @default(now())
+
+  deliveries    Deliverylog[]
+}
+
+
+
+model Deliverylog {
+  id            String        @id @default(cuid())
+  eventId       String 
+  webhookId     String 
+
+  attempt       Int 
+  status        DeliveryStatus     //either success or failed  
+  responseStatus Int?
+
+  createdAt     DateTime     @default(now())
+
+  event        Event      @relation(fields:[eventId], references: [id])
+  webhook      Webhook    @relation(fields:[webhookId], references: [id])
+
+
+  //INDEXES:
+  @@index([eventId])
+  @@index([webhookId])
+}
+
+
+enum DeliveryStatus {
+  SUCCESS
+  FAILED
+}
