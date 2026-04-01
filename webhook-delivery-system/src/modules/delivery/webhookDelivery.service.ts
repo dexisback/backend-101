@@ -8,7 +8,7 @@ export async function processWebhookDelivery(data: {
     payload: any,
     attempt: number
 }) {
-    const { eventId, subscriptionId, payload } = data;
+    const { eventId, subscriptionId, payload, attempt } = data;
     //fetch event:
     const event = await prisma.event.findUnique({
         where: {id: eventId}
@@ -38,7 +38,7 @@ export async function processWebhookDelivery(data: {
         data: {
             eventId:event.id,
             subscriptionId: subscription.id,
-            attempt: 1,
+            attempt,
             status: response.ok ? "SUCCESS" : "FAILED",
             responseStatus : response.status
         }

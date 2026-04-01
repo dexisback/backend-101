@@ -3,7 +3,7 @@ import { env } from "../../config/env.js";
 import { processWebhookDelivery } from "../../modules/delivery/webhookDelivery.service.js";
 
 export const webhookDeliveryWorker = new Worker(
-  "delivery-queue",
+  "webhook-delivery-queue",
   async (job) => {
     const { eventId, subscriptionId, payload } = job.data;
 
