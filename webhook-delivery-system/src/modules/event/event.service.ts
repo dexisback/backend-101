@@ -3,7 +3,7 @@ import type { emitEventInput } from "./event.schema.js";
 import { webhookQueue } from "../../queues/webhook.queue.js";
 
 
-export async function emitEvent(data: emitEventInput) {
+export async function replayEvent(data: emitEventInput) {
     // first, store event:
     const event = await prisma.event.create({
         data: {
@@ -13,7 +13,7 @@ export async function emitEvent(data: emitEventInput) {
     });
 
     //second,  now find matching subscription:
-    const subscription = await prisma.subscription.findMany({
+    const subscriptions = await prisma.subscription.findMany({
         where: { event: data.type },
     });
 
@@ -26,7 +26,7 @@ export async function emitEvent(data: emitEventInput) {
 //     })
 //    }
     //exponential backoff + retries:
-    for(const sub of subscription){
+    for(const sub of subscriptions){
         await webhookQueue.add("deliver-event", {
             eventId: event.id,
             subscriptionId: sub.id,
@@ -44,7 +44,7 @@ export async function emitEvent(data: emitEventInput) {
 
     return {
      event,
-     subscription,
+     replayedTo: subscriptions.length,
     };
 }
 

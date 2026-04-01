@@ -1,6 +1,6 @@
 import { Worker } from "bullmq";
 import { env } from "../../config/env.js";
-
+import { processWebhookDelivery } from "../../modules/delivery/webhookDelivery.service.js";
 
 export const webhookDeliveryWorker = new Worker(
   "delivery-queue",
@@ -10,9 +10,15 @@ export const webhookDeliveryWorker = new Worker(
     console.log("Processing job:", {
       eventId,
       subscriptionId,
+      attempt: job.attemptsMade + 1,
     });
 
-   
+    await processWebhookDelivery({
+      eventId,
+      subscriptionId,
+      payload,
+      attempt: job.attemptsMade + 1,
+    });
   },
   {
     connection: {
@@ -21,13 +27,10 @@ export const webhookDeliveryWorker = new Worker(
   }
 );
 
+webhookDeliveryWorker.on("completed", (job) => {
+  console.log(`Job completed: ${job.id}`);
+});
 
-
-webhookDeliveryWorker.on("completed", (job)=>{
-  console.log(`Job completed: ${job}`)
-})
-
-
-webhookDeliveryWorker.on("failed", (job, err)=>{
-  console.error(`Job failed: ${job?.id}`, err.message)
-})
+webhookDeliveryWorker.on("failed", (job, err) => {
+  console.error(`Job failed: ${job?.id}`, err.message);
+});

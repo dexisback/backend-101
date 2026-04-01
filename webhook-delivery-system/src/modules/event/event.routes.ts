@@ -1,17 +1,18 @@
 import type { FastifyInstance } from "fastify";
 
 import { emitEventSchema } from "./event.schema.js";
-import { emitEvent } from "./event.service.js";
+import { replayEvent } from "./event.service.js";
 
 export async function eventRoutes(app: FastifyInstance) {
     app.post("/emit", async (request, reply)=>{
         const parsedData = emitEventSchema.safeParse(request.body);
         if(!parsedData.success){return reply.status(400).send({error: parsedData.error})}
         //else :
-        await emitEvent(parsedData.data);
+        const result = await replayEvent(parsedData.data);
 
         return reply.status(202).send({
-            message: "event accepted and delivery jobs queued"
+            event: result.event,
+            replayedTo: result.replayedTo,
         })
     })
 }
@@ -24,5 +25,5 @@ export async function eventRoutes(app: FastifyInstance) {
 //this file:
 // receive event from outside
 // zod validate it 
-// pass it to business logic (emitEvent)
+// pass it to business logic (replayEvent)
 

@@ -71,3 +71,8 @@ Two external requests exposed
 2. Events: posts -> xyz just happened
 Then we:
 	Match > create a webhook > send back the notification to subscriber
+
+
+> NOTE: replay functionality:
+	- if eventId given, it fetches the event > find subscriptions for that event.type> enqueue jobs again for it , basically re-run the pipeline again
+	

@@ -5,7 +5,8 @@ import { generateHmac } from "../../utlis/hmac.js";
 export async function processWebhookDelivery(data: {
     eventId: string,
     subscriptionId: string,
-    payload: any
+    payload: any,
+    attempt: number
 }) {
     const { eventId, subscriptionId, payload } = data;
     //fetch event:
