@@ -9,3 +9,6 @@ export const env= {
     REDIS_URL: process.env.REDIS_URL
 }
 
+
+
+//env config
