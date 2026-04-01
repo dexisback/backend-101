@@ -1,8 +1,10 @@
 import z from "zod";
 
+
+//an event will have a type and a payload
 export const emitEventSchema = z.object({
     type: z.string().min(1),
-    payload: z.any() //keep it any for now
+    payload: z.any() //any, because generalised delivery systum
     
 })
 

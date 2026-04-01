@@ -14,7 +14,7 @@ datasource db {
 
 //schema:
 
-model Webhook{
+model Subscription{
    id          String       @id @default(cuid())
    url         String
    event       String  
@@ -39,7 +39,7 @@ model Event {
 model Deliverylog {
   id            String        @id @default(cuid())
   eventId       String 
-  webhookId     String 
+  subscriptionId     String 
 
   attempt       Int 
   status        DeliveryStatus     //either success or failed  
@@ -48,12 +48,12 @@ model Deliverylog {
   createdAt     DateTime     @default(now())
 
   event        Event      @relation(fields:[eventId], references: [id])
-  webhook      Webhook    @relation(fields:[webhookId], references: [id])
+   subscription  Subscription    @relation(fields:[subscriptionId], references: [id])
 
 
   //INDEXES:
   @@index([eventId])
-  @@index([webhookId])
+  @@index([subscriptionId])
 }
 
 

@@ -12,7 +12,13 @@ export async function eventRoutes(app: FastifyInstance) {
 
         return reply.status(201).send({
             event: finalData.event,
-            subscribersFound : finalData.webhooks.length
+            subscribersFound : finalData.subscription.length
         })
     })
 }
+
+//this file:
+// receive event from outside
+// zod validate it 
+// pass it to business logic (emitEvent)
+

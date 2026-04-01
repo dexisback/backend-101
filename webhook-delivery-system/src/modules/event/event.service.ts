@@ -10,13 +10,15 @@ export async function emitEvent(data: emitEventInput) {
         },
     });
 
-    // now find matching webhooks:
-    const webhooks = await prisma.webhook.findMany({
+    // now find matching subscription:
+    const subscription = await prisma.subscription.findMany({
         where: { event: data.type },
     });
 
     return {
         event,
-        webhooks,
+        subscription,
     };
 }
+
+//core business logic for matching event and subscription
