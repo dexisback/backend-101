@@ -8,14 +8,18 @@ export async function eventRoutes(app: FastifyInstance) {
         const parsedData = emitEventSchema.safeParse(request.body);
         if(!parsedData.success){return reply.status(400).send({error: parsedData.error})}
         //else :
-        const finalData = await emitEvent(parsedData.data);
+        await emitEvent(parsedData.data);
 
-        return reply.status(201).send({
-            event: finalData.event,
-            subscribersFound : finalData.subscription.length
+        return reply.status(202).send({
+            message: "event accepted and delivery jobs queued"
         })
     })
 }
+
+
+
+
+
 
 //this file:
 // receive event from outside
