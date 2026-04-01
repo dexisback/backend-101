@@ -18,13 +18,30 @@ export async function emitEvent(data: emitEventInput) {
     });
 
    //enqueue jobs, attach eventId, subscriptionId, and payload to be sent to queue
-   for(const sub of subscription){
-    await webhookQueue.add("deliver-event", {
-        eventId: event.id,
-        subscriptionId: sub.id,
-        payload: data.payload
-    })
-   }
+//    for(const sub of subscription){
+//     await webhookQueue.add("deliver-event", {
+//         eventId: event.id,
+//         subscriptionId: sub.id,
+//         payload: data.payload
+//     })
+//    }
+    //exponential backoff + retries:
+    for(const sub of subscription){
+        await webhookQueue.add("deliver-event", {
+            eventId: event.id,
+            subscriptionId: sub.id,
+            payload: data.payload
+        },
+        {
+            attempts: 3,
+            backoff : {
+                type: "exponential",
+                delay : 6969
+            }
+        }
+    )
+    }
+
     return {
      event,
      subscription,

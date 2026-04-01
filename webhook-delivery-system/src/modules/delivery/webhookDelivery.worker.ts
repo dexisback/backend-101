@@ -12,10 +12,7 @@ export const webhookDeliveryWorker = new Worker(
       subscriptionId,
     });
 
-    // TODO:
-    // fetch event + subscription from DB
-    // send webhook
-    // log result
+   
   },
   {
     connection: {
@@ -26,3 +23,11 @@ export const webhookDeliveryWorker = new Worker(
 
 
 
+webhookDeliveryWorker.on("completed", (job)=>{
+  console.log(`Job completed: ${job}`)
+})
+
+
+webhookDeliveryWorker.on("failed", (job, err)=>{
+  console.error(`Job failed: ${job?.id}`, err.message)
+})
