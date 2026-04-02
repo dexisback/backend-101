@@ -11,3 +11,24 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+
+model User {
+  id                  String        @default(cuid())
+  email               String        @unique 
+  name                String 
+  
+  fileUrl           String?     //optimised webp cloudinary url
+  publicId      String? 
+  blurHashString      String?
+
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+}
+
+
+
+
+//publicId so we can match using cron jobs
+//blurHashString for using blurHash while the image loads up in FE
+ 
