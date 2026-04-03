@@ -38,3 +38,9 @@
 
 
 
+
+
+
+phase 2: adding a separate pipeline for processing large files, using presigned urls, cloudinary sends webhooks for security, and cloudinary handles virus/malware scannning through built in features, also converts the file type to webp or whatever, again, using built in apis/features. only once the webhook is received , the file gets uploaded onto our backend
+
+
