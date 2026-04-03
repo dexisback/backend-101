@@ -2,6 +2,9 @@ import express from "express";
 import type { Request, Response, Application } from "express";
 import mediaRoutes from "./modules/media.routes.js"
 import { globalErrorHandler } from "./middleware/error.js";
+import largeFileRoutes from './modules/largeFile.rotues.js';
+import webhookRoutes from './modules/webhooks/webhook.routes.js';
+
 const app: Application = express();
 
 
@@ -19,8 +22,8 @@ app.get("/health", (_req: Request, res: Response)=>{
 
 
 app.use("/api/media", mediaRoutes)
-//app.use("/api/webhooks", webhookRoutes) //cloudinary calls this endpoint
-
+app.use("/api/media", largeFileRoutes ) //signature generator
+app.use("/api/webhooks", webhookRoutes) //cloudinary webhook receiver
 
 app.use(globalErrorHandler)
 
