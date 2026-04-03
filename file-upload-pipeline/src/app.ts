@@ -1,5 +1,6 @@
 import express from "express";
 import type { Request, Response, Application } from "express";
+import { Router } from "express";
 
 const app: Application = express();
 

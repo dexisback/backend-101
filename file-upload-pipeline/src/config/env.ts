@@ -12,12 +12,13 @@ const envSchema = z.object({
     CLOUDINARY_API_SECRET: z.string()
 })
 
-//safeparse right here in itself:
-const enveed = envSchema.safeParse(process.env);
+// Validate once at startup and fail fast if invalid.
+const parsedEnv = envSchema.safeParse(process.env);
 
-if(!enveed.success){
-    console.error(`invalid environment variables`, enveed.error.flatten())
+if (!parsedEnv.success) {
+    console.error("Invalid environment variables", parsedEnv.error.flatten());
+    throw new Error("Invalid environment variables");
 }
 
-export const env = enveed.data;
+export const env = parsedEnv.data;
 
