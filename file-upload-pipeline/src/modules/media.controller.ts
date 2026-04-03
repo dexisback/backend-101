@@ -1,0 +1,48 @@
+import type { Request, Response, NextFunction } from "express";
+import { optimiseImage } from "../utils/image.js";
+import { uploadToCloudinary , deleteFromCloudinary} from "../services/media.service.js";  
+import {prisma} from "../config/prisma.js"
+//upload the profile pic -> gain from req, , optimise it via sharp in sharp.ts , optimise via blurHash , start cloudinary upload. meanwhiel, check if alr exists and dlt that, update user in our db asw
+export const uploadProfilePicture= async (req: Request, res:Response, next:NextFunction)=>{
+    try {
+        if(!req.file){
+            return res.status(400).json({error: "no image provided"})
+        }
+        const userId = "dummy-user-uuid" //in production we get this from auth middleware
+
+        const bufferOptimisedImage = await optimiseImage(req.file.buffer) //delegate to optimise image via sharp
+        const cloudinaryUpload = await uploadToCloudinary(bufferOptimisedImage, "profile-pictures")
+        
+        //asset managemet: we find if any old img alr exists, destroy it to prevent storage pile up in cloudinary
+        const user = await prisma.user.findUnique({where: {id: userId}})
+        if(user?.publicId){
+            await deleteFromCloudinary(user.publicId);
+        }
+
+        //db stuff:
+        const updatedUser = await prisma.user.update({
+            where : {id: userId},
+            data: {
+                fileUrl: cloudinaryUpload.fileUrl,
+                publicId: cloudinaryUpload.publicId
+                //TODO: add blurHash string here⚠️⚠️⚠️⚠️⚠️
+            }
+        })
+
+        return res.status(200).json({
+            message: `profile picture updated succesfulleh`,
+            data:  {
+                fileUrl : updatedUser.fileUrl,
+                publicId: updatedUser.publicId
+            }
+        })
+
+        
+    } catch (err) {
+        next(err) 
+    }
+
+
+}
+
+

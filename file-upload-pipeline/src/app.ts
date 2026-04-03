@@ -1,7 +1,8 @@
 import express from "express";
 import type { Request, Response, Application } from "express";
 import { Router } from "express";
-
+import mediaRoutes from "./modules/media.routes.js"
+import { globalErrorHandler } from "./middleware/error.js";
 const app: Application = express();
 
 
@@ -11,15 +12,16 @@ app.use(express.urlencoded({ extended: true, limit: "10kb"}))  //idk man, funnil
 
 
 
-app.get("/health", (req: Request, res: Response)=>{
+app.get("/health", (_req: Request, res: Response)=>{
     res.status(200).json({
         status: "OK",
         message: "alive"
     })
 })
 
-//TODO: routes
-//global error handler
+app.use("/api/media", mediaRoutes)
 
+
+app.use(globalErrorHandler)
 
 export default app;
