@@ -14,7 +14,7 @@ datasource db {
 
 
 model User {
-  id                  String        @id @default(cuid())
+  id                  String        @id @default(uuid())
   email               String        @unique 
   name                String 
   
@@ -24,7 +24,36 @@ model User {
 
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
+
+  //large file pipeline:
+  largeFiles          LargeMedia[]
 }
+
+
+model LargeMedia {
+  id          String          @id @default(uuid())
+  userId      String
+  user        User            @relation(fields:[userId], references: [id])
+
+  fileUrl     String?      //null until webhook verifies it
+  publicId    String?     //null until webhook verifies it
+
+  //bouncer:
+  status      UploadStatus       @default(PENDING)
+
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now())
+}
+
+
+enum UploadStatus {
+  PENDING  //signature generated, waiting on cloudinary
+  VERIFIED  //cloudinary webhook fired, file is safe and transformed
+  FAILED // cloudinary rejected it, or malware detected
+}
+
+
 
 
 
