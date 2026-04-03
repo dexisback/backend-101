@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { optimiseImage } from "../utils/image.js";
 import { uploadToCloudinary , deleteFromCloudinary} from "../services/media.service.js";  
 import {prisma} from "../config/prisma.js"
+import { magicNumberValidater } from "../utils/file.js";
 //upload the profile pic -> gain from req, , optimise it via sharp in sharp.ts , optimise via blurHash , start cloudinary upload. meanwhiel, check if alr exists and dlt that, update user in our db asw
 export const uploadProfilePicture= async (req: Request, res:Response, next:NextFunction)=>{
     try {
@@ -10,6 +11,10 @@ export const uploadProfilePicture= async (req: Request, res:Response, next:NextF
         }
         const userId = "dummy-user-uuid" //in production we get this from auth middleware
 
+        //raw hex magic number check:
+        const isItActuallyImageQuestionMark = await magicNumberValidater(req.file.buffer);
+        if(! isItActuallyImageQuestionMark){return res.status(415).json({error: `sike, thats the wrong backend`})}
+        //else, we continue:
         const bufferOptimisedImage = await optimiseImage(req.file.buffer) //delegate to optimise image via sharp
         const cloudinaryUpload = await uploadToCloudinary(bufferOptimisedImage, "profile-pictures")
         
