@@ -23,6 +23,7 @@
     "@prisma/adapter-pg": "^7.4.0",
     "@prisma/client": "^7.4.0",
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.1.0",
     "cloudinary": "^2.9.0",
     "dotenv": "^17.4.0",
     "express": "^5.2.1",
