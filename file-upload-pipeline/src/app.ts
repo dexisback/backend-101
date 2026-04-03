@@ -10,7 +10,7 @@ const app: Application = express();
 
 app.use(express.json({limit: "10kb"}));
 app.use(express.urlencoded({ extended: true, limit: "10kb"}))  //idk man, funnily enough i learnt this loc in my web dev class in college(they teach ajax and jquery)
-
+app.use(express.static('public'));
 
 
 app.get("/health", (_req: Request, res: Response)=>{

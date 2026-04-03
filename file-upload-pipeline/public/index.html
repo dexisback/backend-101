@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media API Demo</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #111; color: #fff; padding: 2rem; max-width: 800px; margin: auto; }
+        .card { background: #222; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border: 1px solid #333; }
+        button { background: #007bff; color: white; border: none; padding: 0.5rem 1rem; cursor: pointer; border-radius: 4px; margin-top: 10px;}
+        button:hover { background: #0056b3; }
+        pre { background: #000; padding: 1rem; overflow-x: auto; border-radius: 4px; color: #0f0; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <h1>SaaS Media Pipeline Demo</h1>
+
+    <div class="card">
+        <h2>1. Avatar Upload (RAM Buffer + Sharp)</h2>
+        <p>Hits: <code>POST /api/media/avatar</code></p>
+        <form id="avatarForm">
+            <input type="file" id="avatarInput" accept="image/*" required>
+            <br>
+            <button type="submit">Upload Avatar</button>
+        </form>
+        <pre id="avatarResult" class="hidden"></pre>
+    </div>
+
+    <div class="card">
+        <h2>2. Large File (Presigned URL)</h2>
+        <p>Hits: <code>GET /api/media/signature</code> -> Posts directly to Cloudinary</p>
+        <form id="largeFileForm">
+            <input type="file" id="largeFileInput" accept="video/*,image/*" required>
+            <br>
+            <button type="submit">Upload Large File</button>
+        </form>
+        <pre id="largeFileResult" class="hidden"></pre>
+    </div>
+
+    <script>
+        // --- 1. Avatar Upload Logic ---
+        document.getElementById('avatarForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const resultBox = document.getElementById('avatarResult');
+            resultBox.classList.remove('hidden');
+            resultBox.textContent = 'Processing with Sharp...';
+
+            const file = document.getElementById('avatarInput').files[0];
+            const formData = new FormData();
+            formData.append('avatar', file);
+
+            try {
+                const response = await fetch('/api/media/avatar', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                resultBox.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+                resultBox.textContent = 'Error: ' + err.message;
+            }
+        });
+
+        // --- 2. Large File Logic (Two-Step) ---
+        document.getElementById('largeFileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const resultBox = document.getElementById('largeFileResult');
+            resultBox.classList.remove('hidden');
+            
+            const file = document.getElementById('largeFileInput').files[0];
+
+            try {
+                // Step 1: Get Signature from your Node backend
+                resultBox.textContent = '1. Requesting cryptographic signature...';
+                const sigRes = await fetch('/api/media/signature');
+                const sigData = await sigRes.json();
+                const keys = sigData.data;
+
+                // Step 2: Build Cloudinary Payload
+                resultBox.textContent = '2. Signature acquired. Uploading direct to Cloudinary...';
+                const cloudData = new FormData();
+                cloudData.append('file', file);
+                cloudData.append('api_key', keys.apiKey);
+                cloudData.append('timestamp', keys.timestamp);
+                cloudData.append('signature', keys.signature);
+                cloudData.append('folder', keys.folder);
+                cloudData.append('context', keys.context);
+
+                // Step 3: Send directly to Cloudinary
+                const cloudRes = await fetch(keys.uploadUrl, {
+                    method: 'POST',
+                    body: cloudData
+                });
+                const finalData = await cloudRes.json();
+                
+                resultBox.textContent = '3. Success! Webhook dispatched to backend.\n\n' + JSON.stringify(finalData, null, 2);
+            } catch (err) {
+                resultBox.textContent = 'Error: ' + err.message;
+            }
+        });
+    </script>
+</body>
+</html>
