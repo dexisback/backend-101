@@ -25,6 +25,7 @@
     "@types/express": "^5.0.6",
     "@types/multer": "^2.1.0",
     "@types/sharp": "^0.31.1",
+    "blurhash": "^2.0.5",
     "cloudinary": "^2.9.0",
     "dotenv": "^17.4.0",
     "express": "^5.2.1",
