@@ -1,4 +1,5 @@
 import {prisma} from "../../config/prisma.js"
+import { redisPublisher } from "../../config/redis.js"
 
 
 export const paymentProcessor = async (razorPayOrderId: string) => {
@@ -37,7 +38,22 @@ export const paymentProcessor = async (razorPayOrderId: string) => {
         })
     })
 
-    //TODO: publish redis pub/sub event here to update the group leader's ui ⚠️⚠️⚠️
+
+    //transaction finish, now we fetch split again to get tabId for ws room
+    const updatedSplit = await prisma.split.findUnique({
+        where: {id: split.id}
+    })
+    if(updatedSplit){ //if exists, broadcast success event to redis
+        redisPublisher.publish("payment_updates", JSON.stringify({
+            tabId: updatedSplit.tabId,
+            splitId: updatedSplit.id,
+            status: "PAID",
+            payeeName: updatedSplit.payeeName
+        }))
+    }
+    
+
+    //update: existing webhook logic pushes a message to redis immediateely after the db transaction susccefully marks a split as PAID
 
 
 }
