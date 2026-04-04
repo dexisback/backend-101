@@ -1,7 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
   provider = "prisma-client"
@@ -11,3 +7,52 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+
+model Tab {
+  id       String      @id @default(uuid())
+  leaderId  String      
+  totalAmount   Int 
+  status      String     @default("PENDING")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  splits   Split[]
+}
+
+
+model Split {
+  id          String        @id @default(uuid())
+  tabId       String     
+  payeeName   String  
+  amount      Int 
+  status      String        @default("PENDING")
+  razorpayOrderId   String?       @unique
+  version        Int       @default(1)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  tab         Tab        @relation(fields:[tabId], references: [id])
+  auditLogs      AuditLog[]  
+
+} 
+
+
+
+model AuditLog {
+  id      String       @id @default(uuid())
+  splitId    String   
+  eventType    String 
+  previousStatus     String?
+  newStatus           String?
+  timeStamp              DateTime    @default(now())
+  
+  split               Split      @relation(fields:[splitId], references: [id])
+}
+
+
+
+
+
+
+

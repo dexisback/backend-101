@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-"dev" : "tsx src/server.ts"
-
+    "dev": "tsx src/server.ts"
   },
   "keywords": [],
   "author": "",
@@ -17,7 +16,11 @@
     "@prisma/adapter-neon": "^7.6.0",
     "@prisma/adapter-pg": "^7.4.0",
     "@prisma/client": "^7.6.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "cors": "^2.8.6",
     "dotenv": "^17.4.0",
+    "express": "^5.2.1",
     "prisma": "^7.6.0",
     "redis": "^5.11.0",
     "zod": "^4.3.6"
