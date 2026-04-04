@@ -4,11 +4,11 @@ import * as tabService from "./tab.service.js";
 export const createTab = async (req: Request, res: Response) => {
     try {
         const{ leaderId, totalAmount, splits }= req.body 
-        if(! leaderId || !totalAmount ||!splits || !Array.isArray(splits)) {
+        if (!leaderId || totalAmount == null || !splits || !Array.isArray(splits)) {
             return res.status(400).json({error: "invalid payment"})
 
         }
-        const splitTotal = splits.reduce((sum, split)=>{sum + split.amount, 0})
+        const splitTotal = splits.reduce((sum: number, split: { amount: number }) => sum + split.amount, 0)
         if(splitTotal !== totalAmount) {
             return res.status(400).json({error: "split amount do not match total amount"})
 

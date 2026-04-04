@@ -10,7 +10,7 @@ const redisConnection ={
 
 
 export const startWebhookWorker = () => {
-    const worker = new Worker("worker-processing", async(job: Job)=> {
+    const worker = new Worker("webhook-processing", async(job: Job)=> {
         console.log(`Worker picking up job with jobId -> ${job.id} for orderId -> ${job.data.orderId}`)
         await paymentProcessor(job.data.orderId)
 

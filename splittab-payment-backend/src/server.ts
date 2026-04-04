@@ -4,15 +4,21 @@ import { startReconciliationCron } from "./modules/workers/reconciliation.cron.j
 import { initWebSocketServer } from "./shared/websockets/socket.manager.js";
 import "./config/redis.js"
 import http from "http"
+import { startWebhookWorker } from "./modules/workers/webhook.worker.js";
 
 
 const PORT = process.env.PORT || 3000;
 async function main(){
     try {
-      await prisma.$connect();
+      
+        await prisma.$connect();
       console.log("db up and runnin...")
+      
       startReconciliationCron();
       console.log("reconcilliation cron up and runnin...")
+
+      startWebhookWorker();
+      console.log("bullmq worker up and runnin...")
 
     //   const server = app.listen(PORT, ()=>{
     //     console.log("server up and runnin")
@@ -22,7 +28,7 @@ async function main(){
     const server = http.createServer(app);
         initWebSocketServer(server)
         console.log(`ws server initalised...`)
-        server.listen(PORT, ()=>{"up and running"})
+        server.listen(PORT, ()=>{ console.log(`server up and runnin on port ${PORT}`) })
         
         const shutdown = async ()=>{
             server.close();

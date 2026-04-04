@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { razorpaySignatureVerifier } from "../../shared/utils/signature.js";
 import * as webhookService from "./webhook.service.js"
+import { webhookQueue } from "../workers/webhook.queue.js";  //market me new overengineering aayi hai 🥀
 
 export const razorpayWebhookHandler = async(req: Request, res: Response)=>{
     const signature = req.headers["x-razorpay-signature"] as string
@@ -12,19 +13,17 @@ export const razorpayWebhookHandler = async(req: Request, res: Response)=>{
     const payload = JSON.parse(req.body.toString())
 
     if(payload.event === "order.paid" || payload.event === "payment.captured") {
-        const orderId = payload.payload.payment.entity.order_id
-        await webhookService.paymentProcessor(orderId)
+        const orderId = payload.event === "payment.captured"
+            ? payload.payload.payment.entity.order_id
+            : payload.payload.order.entity.id
+        // await webhookService.paymentProcessor(orderId)
+        await webhookQueue.add("process-razorpay-success", {orderId})
+        console.log(`Added order ${orderId} to BullMq`)
 
-        res.status(200).send("OK")
-
-        try {
-            
-        } catch (err) {
-            console.error(`${err} is the error, something webhook processing related error`)
-            
-        }
-        res.status(200).send("OK")
+        return res.status(200).send("OK")
     }
+
+    return res.status(200).send("OK")
 
 }
 
