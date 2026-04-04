@@ -5,7 +5,8 @@ import type { Request, Response,Application } from "express"
 
 const app: Application = express();
 
-
+//route imports:
+import tabRoutes from "./modules/tabs/tab.routes.js"
 
 //global middleware:
 app.use(cors())
@@ -19,6 +20,7 @@ app.get("/health", (req: Request, res: Response)=>{
 
 
 //TODO: routes here later ⚠️⚠️⚠️⚠️
+app.use("/api/tabs", tabRoutes)
 
 
 export default app;
