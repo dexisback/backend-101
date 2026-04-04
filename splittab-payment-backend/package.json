@@ -21,6 +21,7 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.0",
     "express": "^5.2.1",
+    "node-cron": "^4.2.1",
     "prisma": "^7.6.0",
     "razorpay": "^2.9.6",
     "redis": "^5.11.0",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
+    "@types/node-cron": "^3.0.11",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   }
