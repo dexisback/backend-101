@@ -1,6 +1,6 @@
 import express from "express"
 import cors from "cors"
-
+import path from 'path'; 
 import type { Request, Response,Application } from "express"
 
 const app: Application = express();
@@ -12,6 +12,11 @@ import webhookRoutes from "./modules/webhooks/webhook.routes.js"
 //global middleware:
 app.use(cors())
 
+
+
+app.use(express.static(path.join(__dirname, '../public')));
+
+
 app.use("/api/webhooks", webhookRoutes) //we use webhook route before express.json so that the raw body is not parsed into an object prematurely 
 app.use(express.json())
 
@@ -21,7 +26,7 @@ app.get("/health", (req: Request, res: Response)=>{
 })
 
 
-//TODO: routes here later ⚠️⚠️⚠️⚠️
+
 app.use("/api/tabs", tabRoutes)
 app.use("/api/splits", splitRoutes)
 

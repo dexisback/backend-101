@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill Splitter API Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="bg-gray-100 p-8 font-sans">
+    <div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold mb-4">Enterprise Bill Splitter</h1>
+
+        <div class="mb-8 border-b pb-4">
+            <h2 class="text-xl font-semibold mb-2">1. Initialize a Tab</h2>
+            <button id="createTabBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                Create ₹2400 Dinner Tab
+            </button>
+            <p id="tabStatus" class="text-sm text-gray-500 mt-2"></p>
+        </div>
+
+        <div class="mb-8 border-b pb-4">
+            <h2 class="text-xl font-semibold mb-2">2. Group Splits</h2>
+            <div id="splitsContainer" class="space-y-4">
+                <p class="text-gray-500 italic">Create a tab to see splits here...</p>
+            </div>
+        </div>
+
+        <div>
+            <h2 class="text-xl font-semibold mb-2">Live WebSocket Logs</h2>
+            <div id="logs" class="bg-gray-900 text-green-400 p-4 rounded h-40 overflow-y-auto font-mono text-sm">
+                Waiting for events...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io(); // Connects automatically to the host serving the page
+        let currentTabId = null;
+
+        // --- UI Log Helper ---
+        const log = (message) => {
+            const logsDiv = document.getElementById('logs');
+            logsDiv.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${message}</div>`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        };
+
+        // --- Socket Listeners ---
+        socket.on('connect', () => log('Connected to WebSocket server'));
+        socket.on('splitUpdated', (data) => {
+            log(`⚡ WEBHOOK UPDATE: ${data.payeeName}'s split marked as ${data.status}`);
+            
+            // Update UI
+            const statusBadge = document.getElementById(`status-${data.splitId}`);
+            const payBtn = document.getElementById(`btn-${data.splitId}`);
+            if (statusBadge) {
+                statusBadge.textContent = data.status;
+                statusBadge.className = 'bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded';
+            }
+            if (payBtn) {
+                payBtn.disabled = true;
+                payBtn.textContent = 'Paid';
+                payBtn.className = 'bg-gray-400 text-white px-4 py-2 rounded cursor-not-allowed';
+            }
+        });
+
+        // --- API Calls ---
+        document.getElementById('createTabBtn').addEventListener('click', async () => {
+            try {
+                // Dummy payload simulating a real user action
+                const payload = {
+                    leaderId: "Amaan Siddiqui",
+                    totalAmount: 240000, // ₹2400 in paise
+                    splits: [
+                        { payeeName: "Amaan Siddiqui", amount: 120000 }, // ₹1200
+                        { payeeName: "Friend 1", amount: 120000 }      // ₹1200
+                    ]
+                };
+
+                const res = await fetch('/api/tabs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const responseData = await res.json();
+                const tab = responseData.data;
+                currentTabId = tab.id;
+
+                document.getElementById('tabStatus').textContent = `Tab created! ID: ${tab.id}`;
+                log(`Tab created: ${tab.id}`);
+
+                // Join the WebSocket room for this tab
+                socket.emit('joinTab', currentTabId);
+
+                renderSplits(tab.splits);
+            } catch (err) {
+                log(`Error creating tab: ${err.message}`);
+            }
+        });
+
+        const renderSplits = (splits) => {
+            const container = document.getElementById('splitsContainer');
+            container.innerHTML = ''; // clear
+
+            splits.forEach(split => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center bg-gray-50 p-3 rounded border';
+                div.innerHTML = `
+                    <div>
+                        <span class="font-medium">${split.payeeName}</span>
+                        <span class="ml-2 text-gray-600">₹${split.amount / 100}</span>
+                        <span id="status-${split.id}" class="ml-2 bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                            ${split.status}
+                        </span>
+                    </div>
+                    <button id="btn-${split.id}" onclick="initPayment('${split.id}')" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                        Pay
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        };
+
+        const initPayment = async (splitId) => {
+            try {
+                log(`Generating order for split: ${splitId}`);
+                
+                // 1. Get Order ID from backend
+                const res = await fetch(`/api/splits/${splitId}/pay`, { method: 'POST' });
+                const orderData = await res.json();
+                
+                if (!res.ok) throw new Error(orderData.error);
+
+                // 2. Open Razorpay Checkout Modal
+                const options = {
+                    key: "YOUR_RAZORPAY_KEY_ID_HERE", // IMPORTANT: Paste your public Test Key here
+                    amount: orderData.data.amount,
+                    currency: orderData.data.currency,
+                    name: "Bill Splitter Inc.",
+                    description: "Settle your split",
+                    order_id: orderData.data.orderId,
+                    handler: function (response) {
+                        log(`Frontend received success from Razorpay. Waiting for backend webhook to verify...`);
+                        // We do NOT update the UI to "Paid" here. 
+                        // We wait for the secure WebSocket event.
+                    },
+                    theme: { color: "#3399cc" }
+                };
+
+                const rzp = new window.Razorpay(options);
+                rzp.open();
+
+            } catch (err) {
+                log(`Error starting payment: ${err.message}`);
+                alert(err.message);
+            }
+        };
+    </script>
+</body>
+</html>
