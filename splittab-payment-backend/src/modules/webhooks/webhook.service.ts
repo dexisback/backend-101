@@ -1,0 +1,43 @@
+import {prisma} from "../../config/prisma.js"
+
+
+export const paymentProcessor = async (razorPayOrderId: string) => {
+    //first, we find the split matching to the incoming razorpay order
+    const split = await prisma.split.findUnique({
+        where: {razorpayOrderId: razorPayOrderId}
+
+    })
+
+    if(!split){return console.error(`split not found for order id ${razorPayOrderId}`)}
+    if (split.status === "PAID") {console.log(`order ${razorPayOrderId} alr marked as PAID!!`); return; }
+
+    //occ update: 
+    await prisma.$transaction(async(transaction)=>{
+        const result = await transaction.split.updateMany({
+            where: {
+                id: split.id,
+                version: split.version   //basically occ lock            }
+            },
+            data: {
+                status: "PAID",
+                version: {increment: 1} //increasing version so any request beyond this fails
+            } 
+        })
+
+        //if count is 0, another porcess updated it first ⚠️⚠️⚠️⚠️⚠️⚠️⚠️ TODO , self notes
+        if(result.count ==0){throw new Error (`concurrency conflict: Split was updated by any other process`)}
+
+        await transaction.auditLog.create({
+            data: {
+                splitId: split.id,
+                eventType: `WEBHOOK_PAYMENT_SUCCESS`,
+                previousStatus: split.status,
+                newStatus: "PAID"
+            }
+        })
+    })
+
+    //TODO: publish redis pub/sub event here to update the group leader's ui ⚠️⚠️⚠️
+
+
+}
