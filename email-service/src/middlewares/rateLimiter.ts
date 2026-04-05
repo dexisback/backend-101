@@ -7,7 +7,6 @@ const maxRequest= 10
 const windowSeconds =1 
 //so, 10 request per 1 second max allowed
 
-
 const tenantRateLimiter = async (req: Request, res: Response, next: NextFunction) => {
     const tenantId = req.headers["x-tenant-id"] as string;
     if(!tenantId) { return res.status(400).json({
