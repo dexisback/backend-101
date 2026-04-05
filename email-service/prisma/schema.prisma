@@ -43,3 +43,18 @@ model SupressionList {
   reason     String    //bounce, complaint   (enum?)
   createdAt    DateTime    @default(now())
 }
+
+
+
+enum EmailStatus {
+  QUEUED
+  PROCESSING
+  DELIVERED
+  FAILED
+  BOUNCED
+}
+
+enum Reason {
+  BOUNCE 
+  COMPLAINT
+}

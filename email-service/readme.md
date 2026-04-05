@@ -27,3 +27,7 @@ prisma/
 
 
 ```
+
+
+### some decisions, notes:
+- indexing createdAt, TODO: (DELETE WHERE createdAt<yesterday) easily
