@@ -1,8 +1,9 @@
 import { Worker, Job, tryCatch } from "bullmq";
 import redisClient from "../config/redis.js";
 import {prisma} from "../config/prisma.js"
-import { log } from "node:console";
-import { connect } from "node:http2";
+import { templateRenderer } from "../utils/templateEngine.js";
+import { sendEmailViaProvider } from "../utils/emailProvider.js";
+
 
 
 export const emailWorker = new Worker("email-notifications", async(job: Job)=>{ //ideally you should use a variable in both producer, and worker but i wont for now just because
@@ -16,19 +17,33 @@ export const emailWorker = new Worker("email-notifications", async(job: Job)=>{ 
 
     //then we compile HTML template and send it via resend(first)/nodemailer(second)
     console.log(`Processing ${eventType} email for ${to}...`)
-    //dummy for now : TODO: add real ⚠️⚠️⚠️⚠️⚠️
-    await new Promise((resolve)=>{
-        setTimeout(resolve, 1000); //simulating network delay
+    //dummy for now : TODO: add real ✅✅✅✅
+
+    const htmlContent = await templateRenderer(eventType, payload)
+    const subject= `Notification: ${eventType.replace("_", " ")}`;
+    const deliveryResult = await sendEmailViaProvider(to, subject, htmlContent)
+    await prisma.emailLog.update({
+        where : {id: logId},
+        data: {
+            status: "SENT",
+            provider: deliveryResult.provider
+        }
     })
+    return {success: true, logId}
+
+
+    // await new Promise((resolve)=>{
+    //     setTimeout(resolve, 1000); //simulating network delay
+    // })
     
 
-    //then we mark as delivered if the provider succesfully updates it:
-    await prisma.emailLog.update({
-        where: { id: logId },
-        data: {status: "DELIVERED", provider: "resend"} //TODO: fix and remove hardcoded as we add logic ⚠️⚠️⚠️⚠️
+    // //then we mark as delivered if the provider succesfully updates it:
+    // await prisma.emailLog.update({
+    //     where: { id: logId },
+    //     data: {status: "DELIVERED", provider: "resend"} //TODO: fix and remove hardcoded as we add logic ⚠️⚠️⚠️⚠️
 
-    }) 
-    return { success: true, logId };
+    // }) 
+    // return { success: true, logId };
 
 
 
