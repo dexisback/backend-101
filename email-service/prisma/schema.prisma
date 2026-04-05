@@ -11,3 +11,35 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+//idempotency key contain its id(key), responseBody, responseStatus, createdAt
+model IdempotencyKey {
+  key     String     @id 
+  responseBody   Json?    
+  responseStatus    Int?
+  createdAt DateTime    @default(now())
+
+@@index([createdAt])
+}
+
+
+model EmailLog {
+  id      String     @id @default(uuid())
+  recipient   String 
+  eventType    String       //depends on the microservice, example: USER_REGISTERED
+  status      String    @default("QUEUED")     //TODO: convert into enum, QUEUED, PROCESSING, DELIVERED , FAILED, BOUNCED
+  provider    String?
+  errorReason   String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+
+  @@index([recipient])
+}
+
+
+
+model SupressionList {
+  email     String    @id 
+  reason     String    //bounce, complaint   (enum?)
+  createdAt    DateTime    @default(now())
+}
