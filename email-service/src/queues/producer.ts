@@ -1,6 +1,5 @@
 import { Queue } from "bullmq";
 import redisClient from "../config/redis.js";
-import { email } from "zod";
 
 
 export const emailQueue = new Queue("email-notifications", {
