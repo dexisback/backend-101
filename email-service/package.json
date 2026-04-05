@@ -27,6 +27,7 @@
     "bullmq": "^5.73.0",
     "dotenv": "^17.4.0",
     "express": "^5.2.1",
+    "handlebars": "^4.7.9",
     "ioredis": "^5.10.1",
     "prisma": "^7.6.0",
     "zod": "^4.3.6"

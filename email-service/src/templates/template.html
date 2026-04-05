@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .container { background-color: #ffffff; padding: 20px; border-radius: 5px; }
+        .btn { display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Welcome to Our service, {{name}}!</h2>
+        <p>We are thrilled (not) to have you on board. Your account is ready(not) to go.</p>
+        <p>Your setup steps:</p>
+        <ul>
+            {{#each steps}}
+                <li>{{this}}</li>
+            {{/each}}
+        </ul>
+        <br>
+        <a href="{{loginUrl}}" class="btn">Login to your dashboard</a>
+    </div>
+</body>
+</html>

@@ -31,3 +31,4 @@ prisma/
 
 ### some decisions, notes:
 - indexing createdAt, TODO: (DELETE WHERE createdAt<yesterday) easily
+- using handlebars (hbs) , industry standard for rmail templated because it is fast, secure and allows for easy variable injection
