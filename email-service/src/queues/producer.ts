@@ -17,8 +17,8 @@ export const emailQueue = new Queue("email-notifications", {
 
 
 //we directly use this in other files to add a job 
-export const addEmailJob = async (eventType: string, payload: any, priorityNum: number, logId: string)=> {
-    return await emailQueue.add(eventType, {...payload, logId}, {priority: priorityNum})  //why third arg object? because bullmq only takes in 3 args, and we need to attach priority level and logId (both numbers ko ek object me ghusa rhe)
+export const addEmailJob = async (to: string, eventType: string, payload: any, priorityNum: number, logId: string)=> {
+    return await emailQueue.add(eventType, {to, ...payload, logId}, {priority: priorityNum})  //why third arg object? because bullmq only takes in 3 args, and we need to attach priority level and logId (both numbers ko ek object me ghusa rhe)
 }
 
 

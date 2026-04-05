@@ -35,6 +35,7 @@ export const notificationSender = async (req: Request, res: Response)=> {
         const priorityLevel = validData.priority === "high" ? 1: validData.priority === "normal" ? 2: 3;
 
         await addEmailJob (
+            validData.to,
             validData.eventType,
             validData.payload,
             priorityLevel,
