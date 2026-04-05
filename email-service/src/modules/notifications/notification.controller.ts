@@ -2,7 +2,7 @@ import type { Request, Response  } from "express";
 import { notifyPayloadSchema } from "./notification.schema.js";
 import {prisma} from "../../config/prisma.js"
 //TODO: later emailQueue here
-
+import { addEmailJob } from "../../queues/producer.js";
 
 export const notificationSender = async (req: Request, res: Response)=> {
     try {
@@ -31,7 +31,16 @@ export const notificationSender = async (req: Request, res: Response)=> {
             }
         })
 
-        //TODO: push  everything needed to bullmq over here
+        //TODO: push  everything needed to bullmq over here (DONE✅ )
+        const priorityLevel = validData.priority === "high" ? 1: validData.priority === "normal" ? 2: 3;
+
+        await addEmailJob (
+            validData.eventType,
+            validData.payload,
+            priorityLevel,
+            emailLog.id
+        )
+
 
         return res.status(202).json({
             success: true,
