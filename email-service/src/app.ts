@@ -1,6 +1,8 @@
 import express from "express";
 import type { Application, Request, Response, NextFunction } from "express";
 import idempotencyChecker from "./middlewares/idempotency.js";
+import notification from "./modules/notifications/notification.routes.js"
+import webhookRoutes from "./modules/webhooks/webhook.routes.js"
 
 const app: Application = express();
 app.use(express.json())
@@ -11,7 +13,8 @@ app.get("/health", (req: Request, res: Response)=>{
 
 
 
-//TODO: yaha pe routes aayenge , notificationRoutes, and webhookRoutes
+app.use("/api/v1/notifications", notification);
+app.use("/api/v1/webhooks", webhookRoutes);
 
 
 
