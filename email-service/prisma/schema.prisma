@@ -26,7 +26,7 @@ model EmailLog {
   id      String     @id @default(uuid())
   recipient   String 
   eventType    String       //depends on the microservice, example: USER_REGISTERED
-  status      String    @default("QUEUED")     //TODO: convert into enum, QUEUED, PROCESSING, DELIVERED , FAILED, BOUNCED
+  status      EmailStatus    @default(QUEUED) 
   provider    String?
   errorReason   String?
   createdAt      DateTime    @default(now())
@@ -38,9 +38,9 @@ model EmailLog {
 
 
 
-model SupressionList {
+model SupressionList { //contains bounced/spam/malicious email ids
   email     String    @id 
-  reason     String    //bounce, complaint   (enum?)
+  reason     Reason
   createdAt    DateTime    @default(now())
 }
 
