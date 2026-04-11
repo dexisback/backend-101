@@ -1,8 +1,10 @@
-import { Worker, Job, tryCatch } from "bullmq";
+import { Worker, Job } from "bullmq";
 import redisClient from "../config/redis.js";
 import {prisma} from "../config/prisma.js"
+import { EmailStatus } from "../generated/prisma/enums.js";
 import { templateRenderer } from "../utils/templateEngine.js";
 import { sendEmailViaProvider } from "../utils/emailProvider.js";
+import { logError, logInfo } from "../utils/logger.js";
 
 
 
@@ -12,7 +14,7 @@ export const emailWorker = new Worker("email-notifications", async(job: Job)=>{ 
     //first, we mark the status as Processing in db:
     await prisma.emailLog.update({
         where: {id: logId},
-        data: {status: "PROCESSING"}  //TODO: add variable enums, instead of hardcoded string statuses ⚠️⚠️⚠️⚠️⚠️
+        data: {status: EmailStatus.PROCESSING}
     })
 
     //then we compile HTML template and send it via resend(first)/nodemailer(second)
@@ -25,25 +27,12 @@ export const emailWorker = new Worker("email-notifications", async(job: Job)=>{ 
     await prisma.emailLog.update({
         where : {id: logId},
         data: {
-            status: "SENT",
+            status: EmailStatus.DELIVERED,
             provider: deliveryResult.provider
         }
     })
+    logInfo("Email worker job completed", { jobId: job.id, logId, to, eventType, provider: deliveryResult.provider });
     return {success: true, logId}
-
-
-    // await new Promise((resolve)=>{
-    //     setTimeout(resolve, 1000); //simulating network delay
-    // })
-    
-
-    // //then we mark as delivered if the provider succesfully updates it:
-    // await prisma.emailLog.update({
-    //     where: { id: logId },
-    //     data: {status: "DELIVERED", provider: "resend"} //TODO: fix and remove hardcoded as we add logic ⚠️⚠️⚠️⚠️
-
-    // }) 
-    // return { success: true, logId };
 
 
 
@@ -54,17 +43,17 @@ export const emailWorker = new Worker("email-notifications", async(job: Job)=>{ 
 
 //event listenders for observability and dlq handling:
 emailWorker.on("completed", (job)=>{
-    console.log(`Job with jobId ${job.id} completeduh succesfullyuh`)
+    logInfo("Worker completed event emitted", { jobId: job.id });
 })
 emailWorker.on("failed", async  (job: Job | undefined , err: Error)=>{
     if(!job){return}
     //else:
-    console.error(`Job with jobId ${job.id} failed attempt ${job.attemptsMade} times, error: ${err.message} `)
+    logError("Worker job failed", { jobId: job.id, attemptsMade: job.attemptsMade, error: err.message });
     if(job.attemptsMade >= (job.opts.attempts ?? 5)){
-        console.log(`job permanently failed, flagging as terminal errror . jobId: ${job.id}`)    
+        logError("Worker job reached max attempts", { jobId: job.id, attemptsMade: job.attemptsMade });
     }
     await prisma.emailLog.update({
         where: { id: job.data.logId},
-        data: {status: "FAILED" , errorReason: err.message}
+        data: {status: EmailStatus.FAILED , errorReason: err.message}
     })
 })
