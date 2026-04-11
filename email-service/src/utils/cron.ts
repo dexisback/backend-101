@@ -1,9 +1,10 @@
 import cron from "node-cron"
 import { prisma } from "../config/prisma.js"
+import { logError, logInfo } from "./logger.js";
 
 export const startCron = ()=>{
     
-        cron.schedule("0 0 * *", async()=>{
+        cron.schedule("0 0 * * *", async()=>{
             try {
                 const fourtyEightHoursAgo = new Date(Date.now()- (48*60*60*1000))
                 //delete all idempotency keys older than that timestamp
@@ -14,9 +15,11 @@ export const startCron = ()=>{
                         }
                     }
                 })
+                logInfo("Cron cleanup completed", { deletedCount: deleted.count });
             } catch (err) {
-                console.error(err)
+                logError("Cron cleanup failed", { error: String(err) });
             }
-        })        
+        })
+        logInfo("Cron scheduled", { schedule: "0 0 * * *" });
     
 }

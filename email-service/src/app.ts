@@ -5,6 +5,7 @@ import notification from "./modules/notifications/notification.routes.js"
 import webhookRoutes from "./modules/webhooks/webhook.routes.js"
 
 const app: Application = express();
+app.use("/api/v1/webhooks/resend", express.raw({ type: "application/json" }));
 app.use(express.json())
 
 app.get("/health", (req: Request, res: Response)=>{

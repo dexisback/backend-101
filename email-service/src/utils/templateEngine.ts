@@ -4,6 +4,7 @@ import fs from "fs/promises"
 import path from "path"
 import Handlebars from "handlebars"
 import redisClient from "../config/redis.js"
+import { fileURLToPath } from "url"
 
 export const templateRenderer = async(eventType: string, payload: any) : Promise<string>=>{
     const redisKey = `template${eventType}`;
@@ -15,8 +16,17 @@ export const templateRenderer = async(eventType: string, payload: any) : Promise
         let finalTemplate = rawTemplateFromRedis
 
         if(!rawTemplateFromRedis) {
-            const templatePath = path.join(__dirname, `../templates/${eventType}.hbs`);
-            rawTemplateFromDisk = await fs.readFile(templatePath, "utf-8");
+            const __filename = fileURLToPath(import.meta.url);
+            const __dirname = path.dirname(__filename);
+            const eventTemplatePath = path.join(__dirname, `../templates/${eventType}.hbs`);
+            const fallbackTemplatePath = path.join(__dirname, "../templates/template.html");
+
+            try {
+                rawTemplateFromDisk = await fs.readFile(eventTemplatePath, "utf-8");
+            } catch {
+                rawTemplateFromDisk = await fs.readFile(fallbackTemplatePath, "utf-8");
+            }
+
             await redisClient.setex(redisKey, 86400, rawTemplateFromDisk) //also set it in redis for the next 24 hours
             finalTemplate = rawTemplateFromDisk
         }
@@ -31,6 +41,5 @@ export const templateRenderer = async(eventType: string, payload: any) : Promise
         throw err; // re-throw to satisfy return type
     }
 }
-
 
 
