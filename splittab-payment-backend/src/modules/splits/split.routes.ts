@@ -6,7 +6,7 @@ const router = Router();
 router.post("/:splitId/pay", paymentLinkCreator)
 
 
-export default Router;
+export default router;
 
 
 

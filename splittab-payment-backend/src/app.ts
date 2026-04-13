@@ -1,9 +1,12 @@
 import express from "express"
 import cors from "cors"
 import path from 'path'; 
+import { fileURLToPath } from "node:url";
 import type { Request, Response,Application } from "express"
 
 const app: Application = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 //route imports:
 import tabRoutes from "./modules/tabs/tab.routes.js"
