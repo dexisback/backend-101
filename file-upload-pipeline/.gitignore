@@ -3,3 +3,8 @@ node_modules
 .env
 
 /src/generated/prisma
+
+.codex/*
+.codex/
+.codex
+

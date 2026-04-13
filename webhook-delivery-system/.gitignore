@@ -5,5 +5,9 @@ dist/
 dist/*
 
 /src/generated/prisma
+.codex/*
+.codex/
+.codex
+
 
 
