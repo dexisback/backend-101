@@ -1,12 +1,6 @@
 import { Worker, Job } from "bullmq";
 import { paymentProcessor } from "../webhooks/webhook.service.js";
-import "dotenv/config"
-
-
-const redisConnection ={
-    host: process.env.REDIS_HOST,
-    port: Number(process.env.REDIS_PORT)
-}
+import { bullConnection } from "../../config/redis.connection.js";
 
 
 export const startWebhookWorker = () => {
@@ -14,7 +8,7 @@ export const startWebhookWorker = () => {
         console.log(`Worker picking up job with jobId -> ${job.id} for orderId -> ${job.data.orderId}`)
         await paymentProcessor(job.data.orderId)
 
-    },{connection: redisConnection})
+    },{connection: bullConnection})
     
     
     

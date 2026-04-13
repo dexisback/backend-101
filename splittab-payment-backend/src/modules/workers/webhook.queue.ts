@@ -1,14 +1,7 @@
 import { Queue } from "bullmq";
-import "dotenv/config"
+import { bullConnection } from "../../config/redis.connection.js";
 
-
-const redisConnection = {
-    host: process.env.REDIS_HOST ,
-    port: Number(process.env.REDIS_PORT)
-    //password not needed since this project uses upstash
-}
-
-export const webhookQueue = new Queue("webhook-processing", {connection: redisConnection, defaultJobOptions: {
+export const webhookQueue = new Queue("webhook-processing", {connection: bullConnection, defaultJobOptions: {
     attempts: 3,
     backoff: {
         type: "exponential",

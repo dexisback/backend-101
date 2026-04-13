@@ -12,6 +12,7 @@ const __dirname = path.dirname(__filename);
 import tabRoutes from "./modules/tabs/tab.routes.js"
 import splitRoutes from "./modules/splits/split.routes.js"
 import webhookRoutes from "./modules/webhooks/webhook.routes.js"
+import { errorHandlerMiddleware } from "./shared/middlewares/errorHandler.middleware.js";
 //global middleware:
 app.use(cors())
 
@@ -32,6 +33,7 @@ app.get("/health", (req: Request, res: Response)=>{
 
 app.use("/api/tabs", tabRoutes)
 app.use("/api/splits", splitRoutes)
+app.use(errorHandlerMiddleware)
 
 
 

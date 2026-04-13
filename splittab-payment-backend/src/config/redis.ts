@@ -1,8 +1,5 @@
 import {Redis} from "ioredis"
-import "dotenv/config"
-
-const redisUrl = process.env.REDIS_URL || "redis://localhost:6379"
-
+import { redisUrl } from "./redis.connection.js";
 
 export const redisPublisher = new Redis(redisUrl);
 export const redisSubscriber = new Redis(redisUrl);

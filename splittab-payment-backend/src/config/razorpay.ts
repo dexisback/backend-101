@@ -1,10 +1,11 @@
 // src/config/razorpay.ts
 import Razorpay from 'razorpay';
-import 'dotenv/config';
+import { env } from './env.js';
+
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID as string,
-  key_secret: process.env.RAZORPAY_KEY_SECRET as string,
+  key_id: env.RAZORPAY_KEY_ID ,
+  key_secret: env.RAZORPAY_KEY_SECRET 
 });
 
 export default razorpay;

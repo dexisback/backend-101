@@ -36,6 +36,29 @@ export const paymentProcessor = async (razorPayOrderId: string) => {
                 newStatus: "PAID"
             }
         })
+
+        const pendingCount = await transaction.split.count({
+            where: {
+                tabId: split.tabId,
+                status: "PENDING"
+            }
+        });
+
+        if (pendingCount === 0) {
+            await transaction.tab.update({
+                where: { id: split.tabId },
+                data: { status: "SETTLED" }
+            });
+
+            await transaction.auditLog.create({
+                data: {
+                    splitId: split.id,
+                    eventType: "TAB_SETTLED",
+                    previousStatus: "PENDING",
+                    newStatus: "SETTLED"
+                }
+            });
+        }
     })
 
 

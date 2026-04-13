@@ -5,9 +5,10 @@ import { initWebSocketServer } from "./shared/websockets/socket.manager.js";
 import "./config/redis.js"
 import http from "http"
 import { startWebhookWorker } from "./modules/workers/webhook.worker.js";
+import { env } from "./config/env.js";
 
 
-const PORT = process.env.PORT || 3000;
+const PORT = env.PORT;
 async function main(){
     try {
       
