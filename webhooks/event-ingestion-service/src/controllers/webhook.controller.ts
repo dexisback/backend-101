@@ -2,7 +2,6 @@ import type { Request, Response } from "express";
 import crypto from "crypto"
 import { webhookSchema } from "../validators/webhook.schema.js";
 import {prisma} from "../lib/prisma.js";
-import { error } from "console";
 import { enqueueEvent } from "../services/queue.service.js";
 import { logger } from "../lib/logger.js";
 
@@ -39,29 +38,37 @@ export const webhookHandler = async (req: Request, res: Response)=>{
     if(!result.success){return res.status(400).send({error: "invalid payload, failed zod validation"})} 
     //else:
     const finalworkingData =result.data
-    console.log(`valid webhook ${finalworkingData.event}`)
+    const eventType = finalworkingData.type || finalworkingData.event;
+    const eventPayload = finalworkingData.payload;
+    const eventId = finalworkingData.eventId || eventPayload.commitId || eventPayload.id;
+
+    if (!eventType || !eventId) {
+        return res.status(400).json({ error: "missing event type or event id" });
+    }
+
+    console.log(`valid webhook ${eventType}`)
 
     //we now have the final working data, now the idempotency logic (dont process the same webhook if alr received by the provider)
     try {
         await prisma.event.create({
             data: {
-                eventId: finalworkingData.payload.id,   //depends on the provider structure
+                eventId,
                 provider, 
-                type: finalworkingData.event,
-                payload: finalworkingData.payload
+                type: eventType,
+                payload: eventPayload
             }
         })
         //push in the queue (enqueue) from qeuueService:
         await enqueueEvent({
-            eventId: finalworkingData.payload.id,
-            type: finalworkingData.event,
-            payload: finalworkingData.payload
+            eventId,
+            type: eventType,
+            payload: eventPayload
         })
 
 
     } catch (err: any) {
         if(err.code === "P2002"){return res.status(200).json({message: "duplicate event/webhook ignored"})}
-            throw error
+            throw err
     }
 
 
