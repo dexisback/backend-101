@@ -4,13 +4,28 @@ import { uploadToCloudinary , deleteFromCloudinary} from "../services/media.serv
 import {prisma} from "../config/prisma.js"
 import { magicNumberValidater } from "../utils/file.js";
 import {  blurHashGenerator  } from "../utils/image.js";
+
+const getOrCreateUser = async () => {
+    const existingUser = await prisma.user.findFirst({ select: { id: true } });
+    if (existingUser) return existingUser.id;
+
+    const newUser = await prisma.user.create({
+        data: {
+            email: `dev-user-${Date.now()}@local.test`,
+            name: "Dev User"
+        },
+        select: { id: true }
+    });
+
+    return newUser.id;
+}
 //upload the profile pic -> gain from req, , optimise it via sharp in sharp.ts , optimise via blurHash , start cloudinary upload. meanwhiel, check if alr exists and dlt that, update user in our db asw
 export const uploadProfilePicture= async (req: Request, res:Response, next:NextFunction)=>{
     try {
         if(!req.file){
             return res.status(400).json({error: "no image provided"})
         }
-        const userId = "dummy-user-uuid" //in production we get this from auth middleware
+        const userId = await getOrCreateUser() //in production we get this from auth middleware
 
         //raw hex magic number check:
         const isItActuallyImageQuestionMark = await magicNumberValidater(req.file.buffer);
@@ -55,5 +70,4 @@ export const uploadProfilePicture= async (req: Request, res:Response, next:NextF
 
 
 }
-
 

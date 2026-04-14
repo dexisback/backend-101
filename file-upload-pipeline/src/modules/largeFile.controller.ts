@@ -3,10 +3,24 @@ import {prisma} from "../config/prisma.js"
 import { secureSignatureGenerator } from "../services/signature.service.js";
 import { env } from "../config/env.js"
 
+const getOrCreateUser = async () => {
+    const existingUser = await prisma.user.findFirst({ select: { id: true } });
+    if (existingUser) return existingUser.id;
+
+    const newUser = await prisma.user.create({
+        data: {
+            email: `dev-user-${Date.now()}@local.test`,
+            name: "Dev User"
+        },
+        select: { id: true }
+    });
+
+    return newUser.id;
+}
 
 export const getUploadSignature = async (req: Request, res: Response, next: NextFunction)=> {
     try {
-        const userId = "simulated-user-uuid"  //in real system received from auth middleware
+        const userId = await getOrCreateUser()  //in real system received from auth middleware
         //we need a placeholder record in db first
         const pendingMedia = await prisma.largeMedia.create({
             data: {userId, status: "PENDING"}
@@ -25,7 +39,7 @@ export const getUploadSignature = async (req: Request, res: Response, next: Next
                 uploadUrl: `https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/video/upload`,
                 apiKey: env.CLOUDINARY_API_KEY,
                 signature,
-                timeStamp,
+                timestamp: timeStamp,
                 folder: uploadParams.folder,
                 context: uploadParams.context,
                 mediaId: pendingMedia.id
@@ -38,5 +52,27 @@ export const getUploadSignature = async (req: Request, res: Response, next: Next
     }
 }
 
+export const getLargeMediaStatus = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { mediaId } = req.params;
+        if (!mediaId || Array.isArray(mediaId)) {
+            return res.status(400).json({ error: "invalid media id" });
+        }
 
+        const media = await prisma.largeMedia.findUnique({
+            where: { id: mediaId }
+        });
+
+        if (!media) {
+            return res.status(404).json({ error: "media not found" });
+        }
+
+        return res.status(200).json({
+            message: "status fetched",
+            data: media
+        });
+    } catch (err) {
+        next(err);
+    }
+}
 
