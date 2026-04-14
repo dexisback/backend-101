@@ -13,7 +13,7 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
         cb(null, true)
     }
     else{
-        cb(new Error("invalid file type, only images supported in our app for now"))
+        cb(new Error("INVALID_FILE_TYPE"))
     }
 }
 
