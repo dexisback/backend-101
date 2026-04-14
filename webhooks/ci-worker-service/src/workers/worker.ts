@@ -20,16 +20,25 @@ export const worker = new Worker(env.QUEUE_NAME, async(job)=>{
     log(`Processing build for ${repo}, ${commitId}`)
 
     //creating a build:
-    const build = await prisma.build.create({
-        data: {
-            repoName: repo,
-            commitId,
-            branch,
-            author,
-            status: "RUNNING",
-            logs:[]
+    let build: any;
+    try {
+        build = await prisma.build.create({
+            data: {
+                repoName: repo,
+                commitId,
+                branch,
+                author,
+                status: "RUNNING",
+                logs:[]
+            }
+        });
+    } catch (err: any) {
+        if (err.code === "P2002") {
+            log(`duplicate build ignored for commit ${commitId}`);
+            return;
         }
-    })
+        throw err;
+    }
 
     try {
         //mark running , before execution:
@@ -59,4 +68,3 @@ export const worker = new Worker(env.QUEUE_NAME, async(job)=>{
 {
     connection: redisConnection
 })
-
