@@ -207,13 +207,3 @@ curl -X POST "http://localhost:3000/webhook/github" \
     }
   }'
 ```
-
-## Why This Project Matters (Portfolio Signal)
-
-This is not a single-process demo API. It demonstrates real backend engineering concerns:
-
-- designing for retries and duplicates from day one
-- choosing durability boundaries (DB + queue) over in-memory assumptions
-- modeling explicit process state transitions
-- separating ingress reliability from execution latency
-- building services that are observable and operationally predictable
