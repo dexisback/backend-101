@@ -1,18 +1,26 @@
 import type { Request, Response, NextFunction } from "express";
 import {prisma} from "../../config/prisma.js"
-import { env } from "../../config/env.js"
-import crypto from "crypto"
+import cloudinary from "../../config/cloudinary.js";
 
 
 export const cloudinaryWebhookHandler = async (req: Request, res: Response, next: NextFunction) => {
-    const { notification_type, status, public_id, secure_url, context } = req.body;
-    const signatureHeader = req.headers['x-cld-signature'] as string;
-    const timestamp = req.body.timestamp;
-    const payloadToSign = `${notification_type}-${timestamp}-${env.CLOUDINARY_API_SECRET}`
-    const expectedSignature = crypto.createHash("sha1").update(payloadToSign).digest("hex");
-    //if signature doesnt match, attacker might be sending fake success signals/webhook
+    const { notification_type, public_id, secure_url, context } = req.body;
+    const signatureHeader = req.headers["x-cld-signature"] as string;
+    const timestampHeader = Number(req.headers["x-cld-timestamp"]);
+    const rawBody = (req as any).rawBody as string;
 
-    if (signatureHeader !== expectedSignature) {
+    if (!signatureHeader || !timestampHeader || !rawBody) {
+        return res.status(401).json({ error: "Invalid webhook signature" });
+    }
+
+    //if signature doesnt match, attacker might be sending fake success signals/webhook
+    const isValid = cloudinary.utils.verifyNotificationSignature(
+        rawBody,
+        timestampHeader,
+        signatureHeader
+    );
+
+    if (!isValid) {
         return res.status(401).json({error: "Invalid webhook signature"})
     }
 
@@ -21,7 +29,11 @@ export const cloudinaryWebhookHandler = async (req: Request, res: Response, next
     }
     
     //extract the hidden db id we taped onto the file earlier:
-    const mediaId = context?.custom?.mediaId;
+    let mediaId = context?.custom?.mediaId || context?.mediaId;
+    if (!mediaId && typeof context === "string") {
+        const match = context.match(/(?:^|\|)mediaId=([^|]+)/);
+        mediaId = match?.[1];
+    }
 
     if(!mediaId) {
         console.error("Webhook received without mediaId context");
@@ -29,7 +41,7 @@ export const cloudinaryWebhookHandler = async (req: Request, res: Response, next
     }
 
     //4: update db based on cloudinary's scan and processing results:
-    if (status === "success") {
+    if (secure_url) {
         await prisma.largeMedia.update({
             where: { id: mediaId },
             data: {
@@ -48,4 +60,3 @@ export const cloudinaryWebhookHandler = async (req: Request, res: Response, next
     }
     return res.status(200).send(`webhook received!`)
 }
-
