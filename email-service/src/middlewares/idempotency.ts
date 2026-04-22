@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import {prisma} from "../config/prisma.js"
 import { logError, logWarn } from "../utils/logger.js";
+import { withPrismaRetry } from "../utils/prismaRetry.js";
 
 
 
@@ -8,9 +9,12 @@ export default async function idempotencyChecker(req: Request, res: Response, ne
     const key = req.headers['idempotency-key'] as string;
     if(!key) { return next() }
     try {
-        const currentRequest = await prisma.idempotencyKey.findUnique({
-            where: { key }
-        })
+        const currentRequest = await withPrismaRetry(
+            () => prisma.idempotencyKey.findUnique({
+                where: { key }
+            }),
+            { operationName: "idempotency.findUnique" }
+        )
 
         if(currentRequest && currentRequest.responseBody){
             return res.status(currentRequest.responseStatus || 200).json(currentRequest.responseBody)
@@ -23,22 +27,28 @@ export default async function idempotencyChecker(req: Request, res: Response, ne
             });
         }
         if(!currentRequest ){
-            await prisma.idempotencyKey.create({
-                data: { key }
-            })
+            await withPrismaRetry(
+                () => prisma.idempotencyKey.create({
+                    data: { key }
+                }),
+                { operationName: "idempotency.create" }
+            )
         }
 
         const originalJSON = res.json.bind(res);
 
         res.json = (body: any) => {
             const statusCode = res.statusCode;
-            void prisma.idempotencyKey.update({
-                where: { key },
-                data: {
-                    responseBody: body,
-                    responseStatus: statusCode
-                }
-            }).catch((err)=>{
+            void withPrismaRetry(
+                () => prisma.idempotencyKey.update({
+                    where: { key },
+                    data: {
+                        responseBody: body,
+                        responseStatus: statusCode
+                    }
+                }),
+                { operationName: "idempotency.update" }
+            ).catch((err)=>{
                 logError("Failed to persist idempotency response", { key, error: String(err) })
             })
 
