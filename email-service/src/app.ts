@@ -1,10 +1,12 @@
 import express from "express";
 import type { Application, Request, Response, NextFunction } from "express";
-import idempotencyChecker from "./middlewares/idempotency.js";
 import notification from "./modules/notifications/notification.routes.js"
 import webhookRoutes from "./modules/webhooks/webhook.routes.js"
 
 const app: Application = express();
+
+app.set("json spaces", 2);
+
 app.use("/api/v1/webhooks/resend", express.raw({ type: "application/json" }));
 app.use(express.json())
 

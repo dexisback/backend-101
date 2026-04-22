@@ -20,8 +20,8 @@
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
     "@prisma/adapter-neon": "^7.6.0",
-    "@prisma/adapter-pg": "^7.4.0",
-    "@prisma/client": "^7.4.0",
+    "@prisma/adapter-pg": "^7.6.0",
+    "@prisma/client": "^7.6.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/ioredis": "^4.28.10",

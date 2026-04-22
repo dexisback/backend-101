@@ -7,30 +7,40 @@ import { sendEmailViaProvider } from "../utils/emailProvider.js";
 import { logError, logInfo } from "../utils/logger.js";
 
 
+const updateEmailLogSafe = async (
+    logId: string | undefined,
+    data: { status: EmailStatus; provider?: string; errorReason?: string }
+) => {
+    if (!logId) {
+        logError("Worker log update skipped", { reason: "missing logId in job payload" });
+        return;
+    }
 
-export const emailWorker = new Worker("email-notifications", async(job: Job)=>{ //ideally you should use a variable in both producer, and worker but i wont for now just because
+    try {
+        await prisma.emailLog.updateMany({
+            where: { id: logId },
+            data
+        });
+    } catch (error) {
+        logError("Worker log update failed", { logId, error: String(error) });
+    }
+};
+
+
+export const emailWorker = new Worker("email-notifications", async(job: Job)=>{
     const { logId, to, eventType, payload } = job.data;
     
-    //first, we mark the status as Processing in db:
-    await prisma.emailLog.update({
-        where: {id: logId},
-        data: {status: EmailStatus.PROCESSING}
-    })
+    await updateEmailLogSafe(logId, {status: EmailStatus.PROCESSING});
 
-    //then we compile HTML template and send it via resend(first)/nodemailer(second)
     console.log(`Processing ${eventType} email for ${to}...`)
-    //dummy for now : TODO: add real ✅✅✅✅
 
     const htmlContent = await templateRenderer(eventType, payload)
     const subject= `Notification: ${eventType.replace("_", " ")}`;
     const deliveryResult = await sendEmailViaProvider(to, subject, htmlContent)
-    await prisma.emailLog.update({
-        where : {id: logId},
-        data: {
-            status: EmailStatus.DELIVERED,
-            provider: deliveryResult.provider
-        }
-    })
+    await updateEmailLogSafe(logId, {
+        status: EmailStatus.DELIVERED,
+        provider: deliveryResult.provider
+    });
     logInfo("Email worker job completed", { jobId: job.id, logId, to, eventType, provider: deliveryResult.provider });
     return {success: true, logId}
 
@@ -41,7 +51,6 @@ export const emailWorker = new Worker("email-notifications", async(job: Job)=>{ 
 
 
 
-//event listenders for observability and dlq handling:
 emailWorker.on("completed", (job)=>{
     logInfo("Worker completed event emitted", { jobId: job.id });
 })
@@ -52,8 +61,12 @@ emailWorker.on("failed", async  (job: Job | undefined , err: Error)=>{
     if(job.attemptsMade >= (job.opts.attempts ?? 5)){
         logError("Worker job reached max attempts", { jobId: job.id, attemptsMade: job.attemptsMade });
     }
-    await prisma.emailLog.update({
-        where: { id: job.data.logId},
-        data: {status: EmailStatus.FAILED , errorReason: err.message}
-    })
+    await updateEmailLogSafe(job.data?.logId, {
+        status: EmailStatus.FAILED,
+        errorReason: err.message
+    });
 })
+
+emailWorker.on("error", (err: Error) => {
+    logError("Worker runtime error", { error: err.message });
+});

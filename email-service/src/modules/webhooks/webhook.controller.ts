@@ -3,8 +3,9 @@ import { Webhook } from "svix";
 import {prisma} from "../../config/prisma.js"
 import { EmailStatus, Reason } from "../../generated/prisma/enums.js";
 import { logError, logInfo, logWarn } from "../../utils/logger.js";
+import { env } from "../../config/env.js";
 
-const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+const webhookSecret = env.RESEND_WEBHOOK_SECRET;
 
 export const resendWebhookHandler = async(req: Request, res: Response)=>{
     const svix_id = req.headers["svix-id"] as string;
@@ -79,7 +80,11 @@ export const resendWebhookHandler = async(req: Request, res: Response)=>{
     return res.status(200).json({ success: true });
 
   } catch (error) {
-    logError("Webhook processing error", { error: String(error) });
+    const errorText = String(error);
+    logError("Webhook processing error", { error: errorText });
+    if (errorText.includes("WebhookVerificationError")) {
+      return res.status(400).json({ success: false, message: "Invalid webhook signature or timestamp" });
+    }
     return res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 }

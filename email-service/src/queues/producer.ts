@@ -1,27 +1,30 @@
 import { Queue } from "bullmq";
 import redisClient from "../config/redis.js";
 
+let emailQueue: Queue | null = null;
 
-export const emailQueue = new Queue("email-notifications", {
-    connection: redisClient,
-    defaultJobOptions: {
-        attempts: 5,
-        backoff: {
-            type: "exponential",
-            delay: 2000
-        },
-        removeOnComplete: true, //auto dlt succesfull jobs from redis to save ram memory
-        removeOnFail: false //why? because dlq
+const getEmailQueue = () => {
+    if (!emailQueue) {
+        emailQueue = new Queue("email-notifications", {
+            connection: redisClient,
+            defaultJobOptions: {
+                attempts: 5,
+                backoff: {
+                    type: "exponential",
+                    delay: 2000
+                },
+                removeOnComplete: true,
+                removeOnFail: false
+            }
+        });
     }
-})
+    return emailQueue;
+};
 
 
-//we directly use this in other files to add a job 
 export const addEmailJob = async (to: string, eventType: string, payload: any, priorityNum: number, logId: string)=> {
-    return await emailQueue.add(eventType, 
+    return await getEmailQueue().add(eventType, 
         {to, eventType, payload, logId}, 
         {priority: priorityNum}
-    )  //why third arg object? because bullmq only takes in 3 args, and we need to attach priority level and logId (both numbers ko ek object me ghusa rhe)
+    )
 }
-
-

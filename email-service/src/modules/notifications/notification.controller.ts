@@ -38,13 +38,24 @@ export const notificationSender = async (req: Request, res: Response)=> {
 
         const priorityLevel = validData.priority === "high" ? 1: validData.priority === "normal" ? 2: 3;
 
-        await addEmailJob (
-            validData.to,
-            validData.eventType,
-            validData.payload,
-            priorityLevel,
-            emailLog.id
-        )
+        try {
+            await addEmailJob (
+                validData.to,
+                validData.eventType,
+                validData.payload,
+                priorityLevel,
+                emailLog.id
+            )
+        } catch (queueErr) {
+            await prisma.emailLog.updateMany({
+                where: { id: emailLog.id },
+                data: {
+                    status: EmailStatus.FAILED,
+                    errorReason: `Queue enqueue failed: ${String(queueErr)}`
+                }
+            });
+            throw queueErr;
+        }
 
         logInfo("Email notification queued", {
             logId: emailLog.id,
@@ -63,6 +74,10 @@ export const notificationSender = async (req: Request, res: Response)=> {
 
     } catch (err) {
         logError("Notification controller failed", { error: String(err) });
-        return res.status(500).json({success: false, message: "Internal server error"}) //TODO: make this next(err) ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: process.env.NODE_ENV === "development" ? String(err) : undefined
+        })
     }
 }
