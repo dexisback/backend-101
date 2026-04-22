@@ -1,18 +1,14 @@
-//this file contains both resend and nodemailer. first HTTPS resend and falllback to SMTP if resend goes down:
-//NOTE: resend = primary transporter and ndoemailer = fallback
-
-
+//Email sending with provider fallback: Resend (primary) -> SMTP (fallback)
 
 import { Resend } from "resend";
-import nodemailer from "nodemailer"
+import nodemailer from "nodemailer";
 import { env } from "../config/env.js";
 import { logError, logInfo, logWarn } from "./logger.js";
 
-
-const hasValidResendKey = Boolean(env.RESEND_API_KEY && env.RESEND_API_KEY.startsWith("re_"));
+const hasValidResendKey = env.RESEND_API_KEY?.startsWith("re_");
 const resend = hasValidResendKey ? new Resend(env.RESEND_API_KEY) : null;
 
-const hasSmtpConfig = Boolean(env.SMTP_HOST && env.SMTP_PORT && env.SMTP_USER && env.SMTP_PASS);
+const hasSmtpConfig = env.SMTP_HOST && env.SMTP_PORT && env.SMTP_USER && env.SMTP_PASS;
 const fallbackTransport = hasSmtpConfig
     ? nodemailer.createTransport({
         host: env.SMTP_HOST,
@@ -24,27 +20,27 @@ const fallbackTransport = hasSmtpConfig
     })
     : null;
 
-export const sendEmailViaProvider= async(to: string, subject: string, html: string)=>{
-    const senderKaEmail = env.SENDER_KA_EMAIL || "onboarding@resend.dev";
+export const sendEmailViaProvider = async (to: string, subject: string, html: string) => {
+    const sender = env.SENDER_KA_EMAIL || "onboarding@resend.dev";
 
     if (resend) {
         try {
-            const {data, error} = await resend.emails.send({
-                from: senderKaEmail,
-                to: to,
-                subject: subject,
-                html: html
-            })
+            const { data, error } = await resend.emails.send({
+                from: sender,
+                to,
+                subject,
+                html
+            });
 
-            if(error) throw new Error(error.message);
-            return { provider: "resend", providerId: data?.id}
+            if (error) {
+                throw new Error(error.message);
+            }
+            return { provider: "resend", providerId: data?.id };
         } catch (err) {
             logWarn("Resend failed, falling back to SMTP", { error: String(err) });
         }
     } else {
-        logInfo("Resend disabled; using SMTP transport", {
-            reason: "missing_or_invalid_resend_api_key",
-        });
+        logInfo("Resend disabled; using SMTP transport", { reason: "missing_or_invalid_resend_api_key" });
     }
 
     if (!fallbackTransport) {
@@ -53,14 +49,14 @@ export const sendEmailViaProvider= async(to: string, subject: string, html: stri
 
     try {
         const info = await fallbackTransport.sendMail({
-            from: senderKaEmail,
-            to: to,
-            subject: subject,
-            html: html
-        })
-        return { provider: "nodemailer", providerId: info.messageId}
+            from: sender,
+            to,
+            subject,
+            html
+        });
+        return { provider: "nodemailer", providerId: info.messageId };
     } catch (fallbackErr) {
         logError("SMTP fallback also failed", { error: String(fallbackErr) });
         throw new Error("Both email providers failed");
-        }
-}
+    }
+};

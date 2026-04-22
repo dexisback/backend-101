@@ -13,7 +13,7 @@ datasource db {
 }
 //idempotency key contain its id(key), responseBody, responseStatus, createdAt
 model IdempotencyKey {
-  key     String     @id 
+  key     String     @id
   responseBody   Json?    
   responseStatus    Int?
   createdAt DateTime    @default(now())
