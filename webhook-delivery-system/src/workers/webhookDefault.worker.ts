@@ -38,8 +38,8 @@ export const webhookDefaultWorker = new Worker(
   {
     connection: { url: env.REDIS_URL },
     concurrency: workerConcurrency,
-    limiter: { max: env.DEFAULT_LANE_RPS, duration: 1000 },
-  }
+    limiter: { max: env.DEFAULT_LANE_RPS, duration: 1000 }, //because you wouldnt wanna hamper subscribers with too many things at once, therefore rate limit thru bullmq api 
+  }//duration: 1 second window
 );
 
 webhookDefaultWorker.on("completed", (job) => {
