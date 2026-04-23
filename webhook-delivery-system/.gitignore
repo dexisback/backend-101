@@ -5,9 +5,6 @@ dist/
 dist/*
 
 /src/generated/prisma
-.codex/*
-.codex/
-.codex
 
-
+TROUBLESHOOTING_REPORT.md
 

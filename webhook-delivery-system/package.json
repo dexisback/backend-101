@@ -23,9 +23,11 @@
     "@prisma/client": "^7.6.0",
     "@types/pg": "^8.20.0",
     "bullmq": "^5.71.1",
+    "deploy": "^1.1.0",
     "dotenv": "^17.3.1",
     "fastify": "^5.8.4",
     "ioredis": "^5.10.1",
+    "migrate": "^2.1.0",
     "pg": "^8.20.0",
     "prisma": "^7.6.0",
     "zod": "^4.3.6"
