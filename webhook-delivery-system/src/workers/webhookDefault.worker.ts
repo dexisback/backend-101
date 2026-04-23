@@ -1,7 +1,7 @@
 import { Worker } from "bullmq";
 import { env } from "../config/env.js";
 import { processWebhookDelivery } from "../modules/delivery/webhookDelivery.service.js";
-import { WEBHOOK_DEFAULT_QUEUE_NAME } from "../queues/webhook.queue.js";
+import { WEBHOOK_DEFAULT_QUEUE_NAME, webhookDlqQueue } from "../queues/webhook.queue.js";
 
 function parsePositiveInt(value: string | undefined, fallback: number): number {
   if (value === undefined || value.trim() === "") return fallback;
@@ -38,6 +38,7 @@ export const webhookDefaultWorker = new Worker(
   {
     connection: { url: env.REDIS_URL },
     concurrency: workerConcurrency,
+    limiter: { max: env.DEFAULT_LANE_RPS, duration: 1000 },
   }
 );
 
@@ -45,8 +46,33 @@ webhookDefaultWorker.on("completed", (job) => {
   console.log(`[worker:${workerName}] job completed id=${job.id}`);
 });
 
-webhookDefaultWorker.on("failed", (job, err) => {
+webhookDefaultWorker.on("failed", async (job, err) => {
   console.error(
     `[worker:${workerName}] job failed id=${job?.id} attemptsMade=${job?.attemptsMade} error=${err.message}`
   );
+
+  if (!job) return;
+
+  const maxAttempts = job.opts.attempts ?? 1;
+  const isFinal = job.attemptsMade >= maxAttempts;
+  if (isFinal) {
+    await webhookDlqQueue.add(
+      "dead-letter",
+      {
+        originalQueue: "default",
+        originalJobId: job.id ?? null,
+        name: job.name,
+        attemptsMade: job.attemptsMade,
+        maxAttempts,
+        eventId: job.data.eventId,
+        subscriptionId: job.data.subscriptionId,
+        payload: job.data.payload,
+        failedAt: new Date().toISOString(),
+        errorMessage: err.message,
+      },
+      { removeOnComplete: { count: env.DLQ_REMOVE_ON_COMPLETE_COUNT } }
+    );
+  }
+
+
 });

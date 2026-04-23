@@ -76,3 +76,9 @@ Then we:
 > NOTE: replay functionality:
 	- if eventId given, it fetches the event > find subscriptions for that event.type> enqueue jobs again for it , basically re-run the pipeline again
 	
+
+
+> phase 1: vertical scaling in worker files (concurrency =5 set)
+> phase 2: horizontal scaling (batch (webhook-critical-worker and critical-queue) and webhook-default-worker  for default-queue). critical events alag se type given rahenge 
+
+NOTE: we define type selection of queues(default vs prioriry ) based on the CONTENT of our requests NOT that the request has the type in itself. not a good practice to allow requests to decide the type rather have it server side

@@ -1,6 +1,19 @@
 import { prisma } from "../../db/prisma.js";
 import type { emitEventInput } from "./event.schema.js";
-import { webhookQueue } from "../../queues/webhook.queue.js";
+// import { webhookQueue } from "../../queues/webhook.queue.js";
+import { webhookCriticalQueue } from "../../queues/webhook.queue.js";
+import { webhookDefaultQueue } from "../../queues/webhook.queue.js";
+import { env } from "../../config/env.js";
+
+export class BackpressureError extends Error {
+    statusCode = 429;
+    constructor(message: string){
+        super(message)
+        this.name ="BackpressureError"
+    }
+}
+
+
 
 
 export async function replayEvent(data: emitEventInput) {
@@ -17,17 +30,19 @@ export async function replayEvent(data: emitEventInput) {
         where: { event: data.type },
     });
 
-   //enqueue jobs, attach eventId, subscriptionId, and payload to be sent to queue
-//    for(const sub of subscription){
-//     await webhookQueue.add("deliver-event", {
-//         eventId: event.id,
-//         subscriptionId: sub.id,
-//         payload: data.payload
-//     })
-//    }
-    //exponential backoff + retries:
-    for(const sub of subscriptions){
-        await webhookQueue.add("deliver-event", {
+    //pick a lane (which type of queue)
+    const isCritical = data.type.startsWith("payment.")
+    const selectedQueue = isCritical ? webhookCriticalQueue: webhookDefaultQueue
+
+    //queue name is narrowed down, now reject if that queue is too deep:
+    const counts = await selectedQueue.getJobCounts("waiting", "active", "delayed");
+    const backlog = (counts.waiting || 0 ) + (counts.active || 0) + (counts.delayed || 0);
+
+    const maxBacklog = isCritical ? env.CRITICAL_MAX_BACKLOG : env.DEFAULT_MAX_BACKLOG
+    if(backlog>maxBacklog){ throw new Error (`Queue backlog is high so we stopping it`)}
+    
+    for (const sub of subscriptions){
+        await selectedQueue.add("deliver-event", {
             eventId: event.id,
             subscriptionId: sub.id,
             payload: data.payload
@@ -45,6 +60,7 @@ export async function replayEvent(data: emitEventInput) {
     return {
      event,
      replayedTo: subscriptions.length,
+     queue: isCritical ? "critical":"default"
     };
 }
 
