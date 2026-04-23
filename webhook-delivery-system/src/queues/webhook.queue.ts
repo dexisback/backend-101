@@ -8,11 +8,11 @@ export type WebhookDeliveryQueueType = {
     payload: any
 }
 
+export const WEBHOOK_DELIVERY_QUEUE_NAME = "webhook-delivery-queue"
 
-
-export const webhookQueue= new Queue<WebhookDeliveryQueueType>("webhook-delivery-queue", {
+export const webhookQueue= new Queue<WebhookDeliveryQueueType>(WEBHOOK_DELIVERY_QUEUE_NAME, {
     connection: {
-        url: env.REDIS_URL!
+        url: env.REDIS_URL
     }
 })
 
