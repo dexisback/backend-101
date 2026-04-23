@@ -2,8 +2,10 @@
 import Fastify from "fastify"
 import { subscriptionRoute } from "./modules/subscription/subscription.routes.js"
 import {eventRoutes} from "./modules/event/event.routes.js"
+
 export const app = Fastify({
-    logger: true
+    logger: true,
+    requestTimeout: 60000  // 60 second timeout for requests
 })
 
 
