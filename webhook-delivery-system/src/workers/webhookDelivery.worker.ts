@@ -1,8 +1,10 @@
+//NOTE: THIS FILE STAYS AS A REFERENCE, WE BATCHED OUT TO CRITICAL WORKER AND DEFAULT WORKER, THIS DOES NOT NEED TO BE RUN ANYMORE 
+
+
 import { Worker } from "bullmq";
 import { env } from "../config/env.js";
 import { processWebhookDelivery } from "../modules/delivery/webhookDelivery.service.js";
-import { WEBHOOK_DELIVERY_QUEUE_NAME } from "../queues/webhook.queue.js";
-
+import { WEBHOOK_DEFAULT_QUEUE_NAME } from "../queues/webhook.queue.js";
 
 
 
@@ -16,11 +18,11 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
 
 const workerName = process.env.WORKER_NAME ?? "worker-1"
 const workerConcurrency = parsePositiveInt(process.env.WORKER_CONCURRENCY, 5)
-console.log(`[worker:${workerName}] starting (queue = ${WEBHOOK_DELIVERY_QUEUE_NAME}, concurrency=${workerConcurrency})`)
+console.log(`[worker:${workerName}] starting (queue=${WEBHOOK_DEFAULT_QUEUE_NAME}, concurrency=${workerConcurrency})`)
 
 
 export const webhookDeliveryWorker = new Worker(
-  WEBHOOK_DELIVERY_QUEUE_NAME,
+  WEBHOOK_DEFAULT_QUEUE_NAME,
   async (job) => {
     const { eventId, subscriptionId, payload } = job.data;
 
@@ -30,7 +32,7 @@ export const webhookDeliveryWorker = new Worker(
     //   attempt: job.attemptsMade + 1,
     // });
     console.log(
-      `[worker:${workerName}] job active id=${job.id} name=${job.name} attempt=${job.attemptsMade}+1 eventId=${eventId} subscriptionId = ${subscriptionId}`
+      `[worker:${workerName}] job active id=${job.id} name=${job.name} attempt=${job.attemptsMade + 1} eventId=${eventId} subscriptionId=${subscriptionId}`
     )
 
     await processWebhookDelivery({
