@@ -219,7 +219,7 @@ These are natural next controls for abuse mitigation and storage hygiene at scal
 ### Prerequisites
 
 - Node.js 20+
-- PostgreSQL
+- PostgreSQL  (Neon)
 - Cloudinary account
 
 ### Environment
@@ -233,6 +233,11 @@ CLOUDINARY_CLOUD_NAME="..."
 CLOUDINARY_API_KEY="..."
 CLOUDINARY_API_SECRET="..."
 ```
+
+Notes for Neon:
+
+- Ensure `DATABASE_URL` includes `sslmode=require`.
+- Remove `channel_binding=require` if your Neon console adds it (Prisma currently cannot connect when it’s present).
 
 ### Install & Run
 
