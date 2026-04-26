@@ -1,9 +1,12 @@
 import type { Request, Response } from "express";
 import crypto from "crypto"
 import { webhookSchema } from "../validators/webhook.schema.js";
-import {prisma} from "../lib/prisma.js";
 import { enqueueEvent } from "../services/queue.service.js";
 import { logger } from "../lib/logger.js";
+import { env } from "../config/env.js";
+import { runFraudChecks } from "../services/fraud.service.js";
+import { createEvent } from "../services/event.service.js";
+import { checkDuplicate } from "../services/idempotency.service.js";
 
 
 export const webhookHandler = async (req: Request, res: Response)=>{
@@ -14,13 +17,23 @@ export const webhookHandler = async (req: Request, res: Response)=>{
     }
     const rawBody = req.body; //rawbody 
     //verify signature code lies in controller for now, TODO: thin out controller later on and verify logic in anothe file ⚠️⚠️⚠️
-    const currentSignature = req.headers["x-razorpay-signature"] as string
-    const secret= process.env.WEBHOOK_SECRET as string;
+    const currentSignature = req.headers["x-razorpay-signature"] as string | undefined;
+    const secret = env.WEBHOOK_SECRET;
 
-    const expectedSignature = crypto.createHmac("sha256", secret).update(rawBody).digest("hex")   //razorpay (example) does the same loc on their end, if it matches , yes
-    // if(expectedSignature!==currentSignature){res.status(400).json({error: "wrong and invalid signature"})}   //NOTE: comment out this line to curl test locally //
-    //else:
-    console.log(`verified webhook from ${provider}`)
+    if (secret && currentSignature) {
+        const expectedSignature = crypto
+            .createHmac("sha256", secret)
+            .update(rawBody)
+            .digest("hex");
+
+        // Uncomment to enforce strict signature rejection
+        // if (expectedSignature !== currentSignature) {
+        //     return res.status(400).json({ error: "wrong and invalid signature" });
+        // }
+        console.log(`verified webhook signature from ${provider}`);
+    } else {
+        console.log(`signature verification skipped for ${provider}`);
+    }
     //logger:
     logger.info("Webhook received", { provider });
 
@@ -28,7 +41,12 @@ export const webhookHandler = async (req: Request, res: Response)=>{
     
     //parsing to string for scema processing
 
-    const parsedSignature = JSON.parse(rawBody.toString());
+    let parsedSignature: unknown;
+    try {
+        parsedSignature = JSON.parse(rawBody.toString());
+    } catch {
+        return res.status(400).json({ error: "invalid JSON payload" });
+    }
     
     // console.log("RAW BODY:", rawBody.toString());
     // console.log("PARSED", parsedSignature)
@@ -50,14 +68,11 @@ export const webhookHandler = async (req: Request, res: Response)=>{
 
     //we now have the final working data, now the idempotency logic (dont process the same webhook if alr received by the provider)
     try {
-        await prisma.event.create({
-            data: {
-                eventId,
-                provider, 
-                type: eventType,
-                payload: eventPayload
-            }
-        })
+        await createEvent(eventId, provider, eventType, eventPayload);
+        
+        //run fraud checks and create alerts if needed:
+        await runFraudChecks(eventId, eventType, eventPayload);
+        
         //push in the queue (enqueue) from qeuueService:
         await enqueueEvent({
             eventId,

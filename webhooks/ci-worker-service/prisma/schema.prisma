@@ -24,6 +24,7 @@ model Build {
   logs       Json?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
 }
 
 enum BuildStatus {

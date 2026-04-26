@@ -3,8 +3,9 @@ import { redis } from "../lib/redis.js";
 import { handlePaymentEvent } from "./handlers/payment.handler.js";
 import { prisma } from "../lib/prisma.js";
 import { logger } from "../lib/logger.js";
+import { env } from "../config/env.js";
 
-const worker = new Worker("events", async(job)=>{
+const worker = new Worker(env.QUEUE_NAME, async(job)=>{
     const { eventId, type, payload } = job.data;
     logger.info("Processing job", { eventId, type });
 

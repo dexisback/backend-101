@@ -25,6 +25,7 @@ model Event {
   updatedAt  DateTime @updatedAt
 
   alerts     Alert[]
+
 }
 
 model Alert {
@@ -34,6 +35,7 @@ model Alert {
   createdAt DateTime @default(now())
 
   event     Event @relation(fields: [eventId], references: [eventId])
+
 }
 
 enum EventStatus {

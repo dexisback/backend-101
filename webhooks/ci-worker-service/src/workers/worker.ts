@@ -12,6 +12,7 @@ export const worker = new Worker(env.QUEUE_NAME, async(job)=>{
             return
         }
         const event = parsedData.data;
+        const eventId = job.data.eventId;
     
 
     if(event.type!=="github.push"){return}
@@ -51,14 +52,9 @@ export const worker = new Worker(env.QUEUE_NAME, async(job)=>{
       });
 
 
-      //run pipeline: 
       await runCIPipeline(build.id);
-      //success:
-      
-      await prisma.build.update({
-        where: {id: build.id}, data: {status: "SUCCESS"}
-      })
-    } catch (err) {
+
+    } catch (err: any) {
         await prisma.build.update({
             where: {id: build.id}, data:{status: "FAILED"}
         })
@@ -67,4 +63,17 @@ export const worker = new Worker(env.QUEUE_NAME, async(job)=>{
 },
 {
     connection: redisConnection
+})
+
+worker.on("completed", (job) => {
+    log(`Job completed ${job.id}`);
+})
+
+worker.on("failed", async (job, err) => {
+    log("Job failed permanently", job?.id, err.message);
+    if (!job) { return; }
+    await prisma.build.update({
+        where: { commitId: job.data.payload?.commitId },
+        data: { status: "FAILED" }
+    }).catch(() => {});
 })

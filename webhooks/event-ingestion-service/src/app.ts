@@ -2,6 +2,8 @@ import express from "express";
 import type { Request, Response } from "express";
 
 import webhookRoutes from "./routes/webhook.route.js"
+import statusRoutes from "./routes/status.route.js"
+import "./workers/worker.js";
 const app = express();
 
 
@@ -10,6 +12,7 @@ const app = express();
 app.use("/webhook", webhookRoutes)
 //now can use json parsing for normal routes
 app.use(express.json())
+app.use("/status", statusRoutes)
 
 app.get("/", (req: Request, res: Response)=>{
     res.send("ok running ")
