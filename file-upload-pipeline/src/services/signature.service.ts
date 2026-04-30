@@ -11,11 +11,13 @@ interface signatureParams {
 }
 
 export const secureSignatureGenerator = ({timeStamp, folder, mediaId}: signatureParams) =>{
+    const allowedFormats = "mp4,mov,webm";
+
     //define the strict rules the upload MUST follow:
     const uploadParams = {
         timestamp: timeStamp,
         folder,
-        allowed_formats : ['mp4', 'mov', 'webm'], //cloudinary rejects anything else
+        allowed_formats: allowedFormats, // cloudinary rejects anything else
         context: `mediaId=${mediaId}`     // Hidden metadata for our Webhook
 
     }

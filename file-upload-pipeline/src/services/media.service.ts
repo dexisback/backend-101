@@ -1,5 +1,6 @@
 import cloudinary from "../config/cloudinary.js";
 import type { UploadApiErrorResponse, UploadApiResponse } from "cloudinary";
+import { demoLog } from "../utils/logger.js";
 
 interface UploadResult {
     fileUrl: string;
@@ -8,13 +9,18 @@ interface UploadResult {
 //upload and delete to cloudinary logic 
 export const uploadToCloudinary = (buffer: Buffer, folder: string = "amaan-uploads"): Promise<UploadResult> => {
     return new Promise((resolve, reject)=>{
+        demoLog.step("SMALL", "Cloudinary upload start", { folder, bytes: buffer.byteLength });
         //create upload stream:
         const uploadStream = cloudinary.uploader.upload_stream(
             { folder: folder },
             (error: UploadApiErrorResponse | undefined , result: UploadApiResponse | undefined) => {
-                if(error) return reject(error)
+                if(error) {
+                    demoLog.err("SMALL", "Cloudinary upload failed", { message: error.message, http_code: (error as any).http_code });
+                    return reject(error);
+                }
                 if(!result){return reject(new Error("cloudinary upload failed"))}
                     if(result) {
+                    demoLog.ok("SMALL", "Cloudinary upload complete", { publicId: result.public_id });
                     resolve({
                         fileUrl: result.secure_url,
                         publicId: result.public_id
@@ -30,7 +36,9 @@ export const uploadToCloudinary = (buffer: Buffer, folder: string = "amaan-uploa
 
 
 export const deleteFromCloudinary = async (publicId: string): Promise <void> => {
+    demoLog.step("SMALL", "Cloudinary destroy start", { publicId });
     await cloudinary.uploader.destroy(publicId)
+    demoLog.ok("SMALL", "Cloudinary destroy complete", { publicId });
 }
 
 

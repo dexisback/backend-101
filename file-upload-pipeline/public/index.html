@@ -19,7 +19,7 @@
 
     <div class="card">
         <h2>1. Avatar Upload (RAM Buffer + Sharp)</h2>
-        <p>Hits: <code>POST /api/media/avatar</code></p>
+        <p>Hits: <code>POST /api/media/profile-picture</code></p>
         <form id="avatarForm">
             <input type="file" id="avatarInput" accept="image/*" required>
             <br>
@@ -30,9 +30,9 @@
 
     <div class="card">
         <h2>2. Large File (Presigned URL)</h2>
-        <p>Hits: <code>GET /api/media/signature</code> -> Posts directly to Cloudinary</p>
+        <p>Hits: <code>GET /api/media/signature</code> -> Posts directly to Cloudinary in chunks</p>
         <form id="largeFileForm">
-            <input type="file" id="largeFileInput" accept="video/*,image/*" required>
+            <input type="file" id="largeFileInput" accept="video/mp4,video/quicktime,video/webm" required>
             <br>
             <button type="submit">Upload Large File</button>
         </form>
@@ -40,6 +40,73 @@
     </div>
 
     <script>
+        const DEFAULT_CHUNK_SIZE_BYTES = 6 * 1024 * 1024;
+
+        const parseCloudinaryResponse = async (response) => {
+            const responseText = await response.text();
+
+            if (!responseText) {
+                return {};
+            }
+
+            try {
+                return JSON.parse(responseText);
+            } catch {
+                return { raw: responseText };
+            }
+        };
+
+        const uploadLargeFileInChunks = async (file, keys, resultBox) => {
+            const chunkSize = Number(keys.chunkSizeBytes) || DEFAULT_CHUNK_SIZE_BYTES;
+            const totalChunks = Math.ceil(file.size / chunkSize) || 1;
+            const uploadId = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
+                ? globalThis.crypto.randomUUID()
+                : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+            let start = 0;
+            let chunkNumber = 0;
+            let finalData = null;
+
+            while (start < file.size) {
+                const end = Math.min(start + chunkSize, file.size);
+                const chunk = file.slice(start, end);
+                const contentRange = `bytes ${start}-${end - 1}/${file.size}`;
+                chunkNumber += 1;
+
+                resultBox.textContent = `2. Uploading chunk ${chunkNumber}/${totalChunks} (${Math.round((end / file.size) * 100)}%)...`;
+
+                const cloudData = new FormData();
+                cloudData.append('file', chunk, file.name);
+                cloudData.append('api_key', keys.apiKey);
+                cloudData.append('timestamp', keys.timestamp);
+                cloudData.append('signature', keys.signature);
+                cloudData.append('folder', keys.folder);
+                cloudData.append('context', keys.context);
+                cloudData.append('allowed_formats', keys.allowedFormats);
+
+                const cloudRes = await fetch(keys.uploadUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Range': contentRange,
+                        'X-Unique-Upload-Id': uploadId
+                    },
+                    body: cloudData
+                });
+
+                const chunkResult = await parseCloudinaryResponse(cloudRes);
+
+                if (!cloudRes.ok) {
+                    const cloudinaryMessage = chunkResult?.error?.message || chunkResult?.raw || cloudRes.statusText;
+                    throw new Error(`Cloudinary upload failed (${cloudRes.status}): ${cloudinaryMessage}`);
+                }
+
+                finalData = chunkResult;
+                start = end;
+            }
+
+            return finalData;
+        };
+
         // --- 1. Avatar Upload Logic ---
         document.getElementById('avatarForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -49,15 +116,26 @@
 
             const file = document.getElementById('avatarInput').files[0];
             const formData = new FormData();
-            formData.append('avatar', file);
+                // backend expects the field name `profile-picture`
+                formData.append('profile-picture', file);
 
             try {
-                const response = await fetch('/api/media/avatar', {
+                const response = await fetch('/api/media/profile-picture', {
                     method: 'POST',
                     body: formData
                 });
-                const data = await response.json();
-                resultBox.textContent = JSON.stringify(data, null, 2);
+
+                const contentType = response.headers.get('content-type') || '';
+                let dataText;
+                if (contentType.includes('application/json')) {
+                    const data = await response.json();
+                    dataText = JSON.stringify(data, null, 2);
+                } else {
+                    // not JSON (probably an HTML error page) — show raw text for debugging
+                    dataText = await response.text();
+                }
+
+                resultBox.textContent = dataText;
             } catch (err) {
                 resultBox.textContent = 'Error: ' + err.message;
             }
@@ -78,24 +156,17 @@
                 const sigData = await sigRes.json();
                 const keys = sigData.data;
 
-                // Step 2: Build Cloudinary Payload
-                resultBox.textContent = '2. Signature acquired. Uploading direct to Cloudinary...';
-                const cloudData = new FormData();
-                cloudData.append('file', file);
-                cloudData.append('api_key', keys.apiKey);
-                cloudData.append('timestamp', keys.timestamp);
-                cloudData.append('signature', keys.signature);
-                cloudData.append('folder', keys.folder);
-                cloudData.append('context', keys.context);
+                    // show mediaId in the UI for status polling
+                    if (keys?.mediaId) {
+                        resultBox.textContent = 'Signature acquired. mediaId=' + keys.mediaId + '\n\n';
+                    }
 
-                // Step 3: Send directly to Cloudinary
-                const cloudRes = await fetch(keys.uploadUrl, {
-                    method: 'POST',
-                    body: cloudData
-                });
-                const finalData = await cloudRes.json();
+                // Step 2: Send to Cloudinary using chunked upload semantics
+                resultBox.textContent = '2. Signature acquired. Uploading direct to Cloudinary in chunks...';
+                const finalData = await uploadLargeFileInChunks(file, keys, resultBox);
                 
-                resultBox.textContent = '3. Success! Webhook dispatched to backend.\n\n' + JSON.stringify(finalData, null, 2);
+                    resultBox.textContent += '3. Success! Cloudinary response:\n' + JSON.stringify(finalData, null, 2) + '\n\n';
+                    resultBox.textContent += 'When Cloudinary finishes processing it will POST a webhook to the server; poll /api/media/status/:mediaId to see VERIFIED/FAILED.';
             } catch (err) {
                 resultBox.textContent = 'Error: ' + err.message;
             }

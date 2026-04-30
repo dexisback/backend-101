@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 
 import multer from "multer";
+import { demoLog } from "../utils/logger.js";
 
 export const globalErrorHandler = (
     err: Error,
@@ -8,6 +9,7 @@ export const globalErrorHandler = (
     res: Response,
     next: NextFunction
 ) => {
+    demoLog.err("API", "Unhandled error", { message: err.message, method: req.method, path: req.path })
     console.error(`Error is , ${err.message}`)
 
  if(err instanceof multer.MulterError){
@@ -19,5 +21,4 @@ if(err.message === "INVALID_FILE_TYPE") {
 }
 return res.status(500).json({error: "internal server error"})
 }
-
 
