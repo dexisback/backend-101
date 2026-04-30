@@ -164,8 +164,17 @@
                 // Step 2: Send to Cloudinary using chunked upload semantics
                 resultBox.textContent = '2. Signature acquired. Uploading direct to Cloudinary in chunks...';
                 const finalData = await uploadLargeFileInChunks(file, keys, resultBox);
-                
-                    resultBox.textContent += '3. Success! Cloudinary response:\n' + JSON.stringify(finalData, null, 2) + '\n\n';
+
+                    // redact sensitive fields before showing to the user
+                    let safeFinal = finalData;
+                    if (safeFinal && typeof safeFinal === 'object') {
+                        if (safeFinal.signature) safeFinal.signature = '[REDACTED]';
+                        if (safeFinal.api_key) safeFinal.api_key = '[REDACTED]';
+                        // also redact nested signature if present
+                        if (safeFinal.context && safeFinal.context.signature) safeFinal.context.signature = '[REDACTED]';
+                    }
+
+                    resultBox.textContent += '3. Success! Cloudinary response:\n' + JSON.stringify(safeFinal, null, 2) + '\n\n';
                     resultBox.textContent += 'When Cloudinary finishes processing it will POST a webhook to the server; poll /api/media/status/:mediaId to see VERIFIED/FAILED.';
             } catch (err) {
                 resultBox.textContent = 'Error: ' + err.message;

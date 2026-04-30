@@ -1,9 +1,9 @@
 # File Upload Pipeline
 
-A production-oriented media ingestion backend built with **Node.js + Express + Prisma + Cloudinary**. The system is designed around a dual-path upload strategy:
+A production-shaped media ingestion backend built with **Node.js + Express + Prisma + Cloudinary**. The system is designed around a dual-path upload strategy:
 
 - **Small files**: validated and transformed in-memory for low-latency profile media updates.
-- **Large files**: uploaded directly to Cloudinary using signed parameters; backend finalizes state only after trusted webhook confirmation.
+- **Large files**: uploaded directly to Cloudinary in chunks using signed parameters; backend finalizes state only after trusted webhook confirmation.
 
 ---
 
@@ -28,9 +28,9 @@ This project implements that architecture with explicit separation between **syn
 
 **Use case**: Profile pictures and other small image uploads where immediate response is required.
 
-### Large File Path (Asynchronous, Signed Upload Pipeline)
+### Large File Path (Asynchronous, Signed + Chunked Upload Pipeline)
 
-Client requests signed upload params -> backend creates `PENDING` media row -> client uploads directly to Cloudinary -> Cloudinary sends webhook -> backend verifies webhook signature -> DB transitions to `VERIFIED` or `FAILED`
+Client requests signed upload params -> backend creates `PENDING` media row -> client uploads directly to Cloudinary in chunks -> Cloudinary sends webhook -> backend verifies webhook signature -> DB transitions to `VERIFIED` or `FAILED`
 
 **Use case**: Video/high-volume payloads where direct-to-cloud upload avoids API server bottlenecks.
 
@@ -77,8 +77,15 @@ Client requests signed upload params -> backend creates `PENDING` media row -> c
   - `signature`
   - `timestamp`
   - `folder`
+  - `allowedFormats`
   - `context`
+  - `chunkSizeBytes`
   - `mediaId`
+
+- Intended client flow for large uploads:
+  - upload directly to Cloudinary instead of proxying bytes through the API server
+  - send chunks with `Content-Range`
+  - reuse a stable `X-Unique-Upload-Id` across all chunks
 
 - `GET /api/media/status/:mediaId`
 - Returns current large-upload state (`PENDING`, `VERIFIED`, `FAILED`) and persisted metadata.
@@ -169,7 +176,7 @@ This separates real-time profile asset updates from asynchronous large-media orc
 A single backend usually fails at scale when all uploads are treated uniformly. This system splits the workload:
 
 - **Small files** -> CPU-bound image pipeline in RAM (fast, deterministic response).
-- **Large files** -> network-heavy direct-to-cloud pipeline (no large binary hop through API server).
+- **Large files** -> network-heavy direct-to-cloud chunked pipeline (no large binary hop through API server).
 
 This pattern reduces ingress pressure, improves tail latency, and keeps app servers stateless under high throughput.
 
@@ -266,11 +273,12 @@ npm run dev
 
 1. `GET /api/media/signature`
 2. DB row created as `PENDING`
-3. Client uploads directly to Cloudinary
-4. Cloudinary webhook sent to backend
-5. Signature verified
-6. DB transition to `VERIFIED` or `FAILED`
-7. `GET /api/media/status/:mediaId` for client state retrieval
+3. Client uploads directly to Cloudinary in chunks
+4. Each chunk uses `Content-Range` plus a stable upload ID
+5. Cloudinary webhook sent to backend after processing completes
+6. Webhook signature verified
+7. DB transition to `VERIFIED` or `FAILED`
+8. `GET /api/media/status/:mediaId` for client state retrieval
 
 ---
 
@@ -278,3 +286,4 @@ npm run dev
 
 - The project is intentionally structured for migration from placeholder identity handling to auth middleware (JWT/session) without redesigning media flow contracts.
 - The ingestion model prioritizes correctness under asynchronous third-party callbacks while preserving low-latency UX for small-file operations.
+- NOTE: This project is learning-oriented. It focuses on the core upload architecture first and intentionally does not yet implement every production concern discussed above (DLQs, background jobs/workers, webhook deduplication, idempotency, retry/backoff, cron cleanups, observabilitiy or rate-limiting. The static .html file used is for the demo video, might contain some sensitive stuff)
