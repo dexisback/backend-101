@@ -102,31 +102,56 @@ This project is designed around payment correctness first:
 
 ## API Endpoints
 
-### Health
+### Health & Config
 
 - `GET /health`
   - basic service health
+
+- `GET /api/config/public`
+  - returns publishable Razorpay Key ID for frontend Checkout
+  - safe to expose; never returns secrets
 
 ### Tabs
 
 - `POST /api/tabs/quote`
   - compute equal split amounts server-side (Splitwise-style)
-  - returns `splits[]` which can be fed into `POST /api/tabs`
+  - returns `splits[]` with deterministic rounding (paise-based)
+  - can be fed directly into `POST /api/tabs`
+  - **Strategy**: EQUAL (divides evenly, remainder distributed to first N participants)
 
 Sample request:
 
 ```json
 {
   "totalAmount": 240000,
-  "participants": ["Alice", "Bob"]
+  "participants": ["Alice", "Bob", "Charlie"]
+}
+```
+
+Sample response:
+
+```json
+{
+  "message": "split quote computed",
+  "data": {
+    "totalAmount": 240000,
+    "participantCount": 3,
+    "strategy": "EQUAL",
+    "splits": [
+      { "payeeName": "Alice", "amount": 80000 },
+      { "payeeName": "Bob", "amount": 80000 },
+      { "payeeName": "Charlie", "amount": 80000 }
+    ]
+  }
 }
 ```
 
 - `POST /api/tabs`
-  - create a tab with splits
+  - create a tab with splits (typically using splits from `/api/tabs/quote`)
   - validates positive integer amounts and split/total consistency
+  - atomically creates tab and linked splits in single transaction
 
-Sample request:
+Sample request (using quote response):
 
 ```json
 {
@@ -171,6 +196,9 @@ Sample request:
 
 - Optimistic Concurrency Control (OCC)
   - `Split.version` is checked during update to prevent lost updates in concurrent processing.
+
+- Transaction Timeout Tuning
+  - Prisma `transactionOptions` configured with `maxWait: 15_000` and `timeout: 30_000` to handle contention from concurrent cron/worker tasks (especially on serverless Postgres pools).
 
 - Append-Only Audit Trail
   - all critical status transitions are written to `AuditLog`.
@@ -217,12 +245,17 @@ npx prisma generate
 npm run dev
 ```
 
+## Frontend Client
+
+A Splitwise-style demo client is available at `public/index.html`:
+- Enter leader, total amount (₹), and participant names
+- Click **Quote Equal Split** to compute split amounts server-side
+- Click **Create Tab** to create the tab and show splits
+- Click **Pay** to initiate Razorpay Checkout
+- Live WebSocket logs show split updates as webhooks arrive
+- Razorpay Key ID is fetched from `/api/config/public` at runtime (never hard-coded)
+
 ## Notes
 
 - Amounts are handled in minor currency units (paise).
-- Public demo client is available at `public/index.html`.
-
-
----
-# important: razorpay expects receipts length <=40. So send the curl requests accordingly 
----
+- Razorpay receipt IDs are deterministically hashed from split IDs to stay ≤ 40 characters.
