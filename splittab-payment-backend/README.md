@@ -109,6 +109,19 @@ This project is designed around payment correctness first:
 
 ### Tabs
 
+- `POST /api/tabs/quote`
+  - compute equal split amounts server-side (Splitwise-style)
+  - returns `splits[]` which can be fed into `POST /api/tabs`
+
+Sample request:
+
+```json
+{
+  "totalAmount": 240000,
+  "participants": ["Alice", "Bob"]
+}
+```
+
 - `POST /api/tabs`
   - create a tab with splits
   - validates positive integer amounts and split/total consistency
@@ -208,3 +221,8 @@ npm run dev
 
 - Amounts are handled in minor currency units (paise).
 - Public demo client is available at `public/index.html`.
+
+
+---
+# important: razorpay expects receipts length <=40. So send the curl requests accordingly 
+---

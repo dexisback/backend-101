@@ -1,10 +1,9 @@
 import { Router } from "express";
-import { createTab } from "./tab.controller.js";
-import { createWriteStream } from "node:fs";
+import { createTab, quoteTabSplits } from "./tab.controller.js";
 
 const router = Router();
 
-
+router.post("/quote", quoteTabSplits);
 router.post("/", createTab);
 
 

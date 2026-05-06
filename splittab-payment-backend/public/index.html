@@ -13,11 +13,37 @@
         <h1 class="text-2xl font-bold mb-4">Enterprise Bill Splitter</h1>
 
         <div class="mb-8 border-b pb-4">
-            <h2 class="text-xl font-semibold mb-2">1. Initialize a Tab</h2>
-            <button id="createTabBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                Create ₹2400 Dinner Tab
-            </button>
-            <p id="tabStatus" class="text-sm text-gray-500 mt-2"></p>
+            <h2 class="text-xl font-semibold mb-2">1. Create a Tab (Backend-Computed Splits)</h2>
+
+            <div class="grid grid-cols-1 gap-3">
+                <label class="text-sm">
+                    <div class="text-gray-700 mb-1">Leader</div>
+                    <input id="leaderInput" class="w-full border rounded px-3 py-2" value="Amaan Siddiqui" />
+                </label>
+
+                <label class="text-sm">
+                    <div class="text-gray-700 mb-1">Total Amount (₹)</div>
+                    <input id="totalAmountInput" type="number" class="w-full border rounded px-3 py-2" value="2400" min="1" step="1" />
+                    <div class="text-xs text-gray-500 mt-1">Stored as paise in backend.</div>
+                </label>
+
+                <label class="text-sm">
+                    <div class="text-gray-700 mb-1">Participants (one per line)</div>
+                    <textarea id="participantsInput" class="w-full border rounded px-3 py-2" rows="3">Amaan Siddiqui
+Friend 1</textarea>
+                </label>
+
+                <div class="flex gap-2">
+                    <button id="quoteBtn" class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800">
+                        Quote Equal Split
+                    </button>
+                    <button id="createTabBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                        Create Tab
+                    </button>
+                </div>
+
+                <p id="tabStatus" class="text-sm text-gray-500"></p>
+            </div>
         </div>
 
         <div class="mb-8 border-b pb-4">
@@ -38,6 +64,18 @@
     <script>
         const socket = io(); // Connects automatically to the host serving the page
         let currentTabId = null;
+        let lastQuote = null;
+        let razorpayKeyId = null;
+
+        const getRazorpayKeyId = async () => {
+            if (razorpayKeyId) return razorpayKeyId;
+            const res = await fetch('/api/config/public');
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'failed to load public config');
+            if (!data.razorpayKeyId) throw new Error('razorpayKeyId missing from server config');
+            razorpayKeyId = data.razorpayKeyId;
+            return razorpayKeyId;
+        };
 
         // --- UI Log Helper ---
         const log = (message) => {
@@ -66,16 +104,84 @@
         });
 
         // --- API Calls ---
+        const readInputs = () => {
+            const leaderId = document.getElementById('leaderInput').value.trim();
+            const totalRupees = Number(document.getElementById('totalAmountInput').value);
+            const totalAmount = Math.round(totalRupees * 100); // paise
+            const participantsText = document.getElementById('participantsInput').value;
+            const participants = participantsText
+                .split('\n')
+                .map((x) => x.trim())
+                .filter(Boolean);
+
+            if (!leaderId) throw new Error('Leader is required');
+            if (!Number.isFinite(totalRupees) || totalRupees <= 0) throw new Error('Total amount must be positive');
+            if (!Number.isInteger(totalRupees)) throw new Error('Total amount must be a whole number (₹) for this demo');
+            if (participants.length < 1) throw new Error('Add at least one participant');
+
+            return { leaderId, totalAmount, participants };
+        };
+
+        const renderQuote = (quote) => {
+            const container = document.getElementById('splitsContainer');
+            container.innerHTML = '';
+
+            quote.splits.forEach((split) => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center bg-gray-50 p-3 rounded border';
+                div.innerHTML = `
+                    <div>
+                        <span class="font-medium">${split.payeeName}</span>
+                        <span class="ml-2 text-gray-600">₹${(split.amount / 100).toFixed(2)}</span>
+                        <span class="ml-2 bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                            QUOTED
+                        </span>
+                    </div>
+                    <div class="text-xs text-gray-500">Equal split</div>
+                `;
+                container.appendChild(div);
+            });
+        };
+
+        const quoteSplits = async () => {
+            const { totalAmount, participants } = readInputs();
+            log(`Quoting equal split for ${participants.length} participants...`);
+
+            const res = await fetch('/api/tabs/quote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ totalAmount, participants })
+            });
+            const responseData = await res.json();
+            if (!res.ok) throw new Error(responseData.error || 'quote failed');
+
+            lastQuote = responseData.data;
+            renderQuote(lastQuote);
+            document.getElementById('tabStatus').textContent = `Quote ready: ${participants.length} splits computed.`;
+            log('Quote computed successfully');
+        };
+
+        document.getElementById('quoteBtn').addEventListener('click', async () => {
+            try {
+                await quoteSplits();
+            } catch (err) {
+                log(`Error quoting splits: ${err.message}`);
+                alert(err.message);
+            }
+        });
+
         document.getElementById('createTabBtn').addEventListener('click', async () => {
             try {
-                // Dummy payload simulating a real user action
+                const { leaderId, totalAmount, participants } = readInputs();
+
+                if (!lastQuote || lastQuote.totalAmount !== totalAmount || lastQuote.participantCount !== participants.length) {
+                    await quoteSplits();
+                }
+
                 const payload = {
-                    leaderId: "Amaan Siddiqui",
-                    totalAmount: 240000, // ₹2400 in paise
-                    splits: [
-                        { payeeName: "Amaan Siddiqui", amount: 120000 }, // ₹1200
-                        { payeeName: "Friend 1", amount: 120000 }      // ₹1200
-                    ]
+                    leaderId,
+                    totalAmount,
+                    splits: lastQuote.splits
                 };
 
                 const res = await fetch('/api/tabs', {
@@ -83,8 +189,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                
+
                 const responseData = await res.json();
+                if (!res.ok) throw new Error(responseData.error || 'create tab failed');
+
                 const tab = responseData.data;
                 currentTabId = tab.id;
 
@@ -93,10 +201,10 @@
 
                 // Join the WebSocket room for this tab
                 socket.emit('joinTab', currentTabId);
-
                 renderSplits(tab.splits);
             } catch (err) {
                 log(`Error creating tab: ${err.message}`);
+                alert(err.message);
             }
         });
 
@@ -133,9 +241,11 @@
                 
                 if (!res.ok) throw new Error(orderData.error);
 
+                const keyId = await getRazorpayKeyId();
+
                 // 2. Open Razorpay Checkout Modal
                 const options = {
-                    key: "YOUR_RAZORPAY_KEY_ID_HERE", // IMPORTANT: Paste your public Test Key here
+                    key: keyId,
                     amount: orderData.data.amount,
                     currency: orderData.data.currency,
                     name: "Bill Splitter Inc.",

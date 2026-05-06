@@ -1,5 +1,6 @@
 import {prisma} from "../../config/prisma.js"
 import razorpay from "../../config/razorpay.js"
+import crypto from "node:crypto";
 
 export const paymentOrderGenerator = async (splitId: string) => {
     const split = await prisma.split.findUnique({
@@ -27,11 +28,24 @@ export const paymentOrderGenerator = async (splitId: string) => {
 
         amount: split.amount,
         currency: "INR",
-        receipt: `receipt_${split.id}`   //custom receipt id linking to our db
+        // Razorpay requires receipt length <= 40 characters.
+        // Use a deterministic short hash tied to the split id.
+        receipt: `rcpt_${crypto.createHash("sha1").update(split.id).digest("hex").slice(0, 35)}`
     }
 
     //now calling razorpay API to create the order;
-    const order = await razorpay.orders.create(options);
+    let order;
+    try {
+        order = await razorpay.orders.create(options);
+    } catch (err: unknown) {
+        const anyErr = err as any;
+        const description = anyErr?.error?.description ?? anyErr?.message;
+        throw new Error(
+            description
+                ? `Razorpay order create failed: ${description}`
+                : "Razorpay order create failed"
+        );
+    }
 
     // best-effort idempotency under race: only first write from null->id wins
     const updateResult = await prisma.split.updateMany({

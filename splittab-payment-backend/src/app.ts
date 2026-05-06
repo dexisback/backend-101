@@ -13,6 +13,7 @@ import tabRoutes from "./modules/tabs/tab.routes.js"
 import splitRoutes from "./modules/splits/split.routes.js"
 import webhookRoutes from "./modules/webhooks/webhook.routes.js"
 import { errorHandlerMiddleware } from "./shared/middlewares/errorHandler.middleware.js";
+import { env } from "./config/env.js";
 //global middleware:
 app.use(cors())
 
@@ -28,6 +29,12 @@ app.use(express.json())
 app.get("/health", (req: Request, res: Response)=>{
     res.status(200).json({status: "ok", timeStamp: new Date()})
 })
+
+// Public (safe) runtime config for the demo client.
+// NOTE: Exposes only publishable values.
+app.get("/api/config/public", (_req: Request, res: Response) => {
+    res.status(200).json({ razorpayKeyId: env.RAZORPAY_KEY_ID });
+});
 
 
 

@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response } from "express";
 
 
 
@@ -26,9 +26,9 @@ export const paymentLinkCreator = async (req: Request, res: Response)=> {
 
 
 
-    } catch (err:any) {
-        console.error(`error is -> ${err}`)
-        res.status(400).json({error: err.message || `internal server error`})
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "internal server error";
+        res.status(500).json({ error: message });
     }
 }
 

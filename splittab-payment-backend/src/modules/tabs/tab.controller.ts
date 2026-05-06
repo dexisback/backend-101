@@ -38,3 +38,30 @@ export const createTab = async (req: Request, res: Response) => {
         return res.status(500).json({error: `internal server error buddy`})
     }
 }
+
+const quoteTabSplitsSchema = z.object({
+    totalAmount: z.number().int().positive(),
+    participants: z.array(z.string().min(1)).min(1)
+});
+
+export const quoteTabSplits = async (req: Request, res: Response) => {
+    try {
+        const { totalAmount, participants } = quoteTabSplitsSchema.parse(req.body);
+
+        const quote = tabService.quoteEqualSplits(totalAmount, participants);
+
+        return res.status(200).json({
+            message: "split quote computed",
+            data: quote,
+        });
+    } catch (err: unknown) {
+        if (err instanceof z.ZodError) {
+            return res.status(400).json({
+                error: "validation failed",
+                details: err.issues,
+            });
+        }
+        const message = err instanceof Error ? err.message : "internal server error";
+        return res.status(500).json({ error: message });
+    }
+};
