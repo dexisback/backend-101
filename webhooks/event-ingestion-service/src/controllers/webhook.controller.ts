@@ -6,7 +6,6 @@ import { logger } from "../lib/logger.js";
 import { env } from "../config/env.js";
 import { runFraudChecks } from "../services/fraud.service.js";
 import { createEvent } from "../services/event.service.js";
-import { checkDuplicate } from "../services/idempotency.service.js";
 
 
 export const webhookHandler = async (req: Request, res: Response)=>{
@@ -70,8 +69,10 @@ export const webhookHandler = async (req: Request, res: Response)=>{
     try {
         await createEvent(eventId, provider, eventType, eventPayload);
         
-        //run fraud checks and create alerts if needed:
-        await runFraudChecks(eventId, eventType, eventPayload);
+        // Run fraud checks only for payment events (demo keeps rules payment-oriented)
+        if (eventType.startsWith("payment.")) {
+            await runFraudChecks(eventId, eventType, eventPayload);
+        }
         
         //push in the queue (enqueue) from qeuueService:
         await enqueueEvent({

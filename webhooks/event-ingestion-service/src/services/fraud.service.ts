@@ -2,6 +2,9 @@
 import {prisma} from "../lib/prisma.js"
 
 export const runFraudChecks = async (eventId: string, type: string, payload: any) => {
+    if (!type.startsWith("payment.")) {
+        return;
+    }
     const alerts : string[] = [];
     //fraud 1: high amount of moneyyy:
     if(payload.amount && payload.amount > 690000) {
